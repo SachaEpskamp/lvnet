@@ -1,0 +1,10 @@
+Package: rim
+Type: Package
+Title: Residual Interaction Modeling
+Version: 0.1
+Date: 2015-02-22
+Author: Sacha Epskamp
+Maintainer: Sacha Epskamp <mail@sachaepskamp.com>
+Description: More about what it does (maybe more than one line)
+License: What license is it under?
+Imports: glasso, qgraph, Matrix, corpcor, psych, mvtnorm
