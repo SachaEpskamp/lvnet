@@ -8,3 +8,4 @@ Maintainer: Sacha Epskamp <mail@sachaepskamp.com>
 Description: More about what it does (maybe more than one line)
 License: What license is it under?
 Imports: glasso, qgraph, Matrix, corpcor, psych, mvtnorm
+Depends: OpenMx
