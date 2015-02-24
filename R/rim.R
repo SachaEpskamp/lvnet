@@ -3,10 +3,12 @@
 rim <- function(
   data, # Raw data or a covariance matrix
   lambda, # Lambda design matrix. NA indicates free parameters. If missing and psi is missing, defaults to identity matrix with warning
-  omega, # Network. If missing, defaults to matrix of zeroes
-  psi, # Latent variance-covariance matrix. If missing, defaults to free
   beta, # Structural matrix. If missing, defaults to zero.
-  delta, # Scaling matrix, can be missing
+  omega_theta, # Observed residual network. If missing, defaults to matrix of zeroes
+  delta_theta, # Scaling matrix, can be missing
+  omega_psi, # Latent residual network. If missing, defaults to matrix of zeroes
+  delta_psi, # Scaling matrix, can be missing
+  psi, # Latent variance-covariance matrix. If missing, defaults to free
   theta, # Used if model = "sem". Defaults to diagonal
   sampleSize,
   model = c("rim","sem")){
@@ -17,10 +19,12 @@ rim <- function(
   mod <- generateRIMmodel(
     data = data,
     lambda = lambda,
-    omega = omega,
+    omega_psi = omega_psi,
+    omega_theta = omega_theta,
+    delta_psi = delta_psi,
+    delta_theta = delta_theta,
     psi = psi,
     beta = beta,
-    delta = delta,
     theta = theta,
     sampleSize = sampleSize,
     name = "model",
@@ -34,9 +38,10 @@ rim <- function(
     satMod <- generateRIMmodel(
       data = data, 
       lambda = diag(Nvar), 
-      psi = matrix(NA,Nvar,Nvar), 
-      delta = matrix(0, Nvar,Nvar), 
-      omega = matrix(0, Nvar,Nvar),
+      omega_psi = matrix(NA, Nvar, Nvar),
+      omega_theta = matrix(0, Nvar,Nvar),
+      delta_psi = diag(NA, Nvar),
+      delta_theta = matrix(0, Nvar,Nvar),
       name = "saturated",
       model = "rim",
       sampleSize = sampleSize
@@ -47,7 +52,6 @@ rim <- function(
       lambda = diag(Nvar), 
       psi = matrix(NA,Nvar,Nvar), 
       theta = matrix(0, Nvar,Nvar), 
-      omega = matrix(0, Nvar,Nvar),
       name = "saturated",
       model = "sem",
       sampleSize = sampleSize
@@ -64,8 +68,10 @@ rim <- function(
       data = data, 
       lambda = diag(Nvar), 
       psi = diag(NA, Nvar, Nvar), 
-      delta = matrix(0, Nvar, Nvar), 
-      omega = matrix(0, Nvar, Nvar),
+      omega_psi = matrix(0, Nvar, Nvar),
+      omega_theta = matrix(0, Nvar,Nvar),
+      delta_psi = diag(NA, Nvar),
+      delta_theta = matrix(0, Nvar,Nvar),
       name = "independence",
       model = "rim",
       sampleSize = sampleSize
@@ -76,7 +82,6 @@ rim <- function(
       lambda = diag(Nvar), 
       psi = diag(NA, Nvar, Nvar), 
       theta = matrix(0, Nvar, Nvar), 
-      omega = matrix(0, Nvar, Nvar),
       name = "independence",
       model = "sem",
       sampleSize = sampleSize
@@ -103,8 +108,10 @@ rim <- function(
     matrices = list(
       lambda = fitMod$matrices$lambda$values,
       psi = fitMod$matrices$psi$values,
-      omega = fitMod$matrices$omega$values,
-      delta = fitMod$matrices$delta$values,
+      omega_theta = fitMod$matrices$omega_theta$values,
+      delta_theta = fitMod$matrices$delta_theta$values,
+      omega_psi = fitMod$matrices$omega_psi$values,
+      delta_psi = fitMod$matrices$delta_psi$values,
       theta = fitMod$matrices$theta$values,
       beta =  fitMod$matrices$beta$values,
       sigma = fitMod$algebras$sigma$result  
