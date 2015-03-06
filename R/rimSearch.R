@@ -3,10 +3,12 @@
 rimSearch <- function(
   data, # Raw data or a covariance matrix
   lambda, # Lambda design matrix. NA indicates free parameters. If missing and psi is missing, defaults to identity matrix with warning
-  omega, # Network. If missing, defaults to matrix of zeroes
-  psi, # Latent variance-covariance matrix. If missing, defaults to free
   beta, # Structural matrix. If missing, defaults to zero.
-  delta, # Scaling matrix, can be missing
+  omega_theta, # Observed residual network. If missing, defaults to matrix of zeroes
+  delta_theta, # Scaling matrix, can be missing
+  omega_psi, # Latent residual network. If missing, defaults to matrix of zeroes
+  delta_psi, # Scaling matrix, can be missing
+  psi, # Latent variance-covariance matrix. If missing, defaults to free
   theta, # Used if model = "sem". Defaults to diagonal
   sampleSize,
   model = c("rim","sem"),
@@ -17,15 +19,15 @@ rimSearch <- function(
   alpha = 0.05,
   verbose = TRUE
 ){
-  if (missing(omega)){
-    omega <- matrix(0, ncol(data), ncol(data))
+  if (missing(omega_theta)){
+    omega_theta <- matrix(0, ncol(data), ncol(data))
   }
   if (missing(theta)){
     theta <- diag(NA, ncol(data))
   }
   
   if (model[[1]]=="rim"){
-    optMat <- omega
+    optMat <- omega_theta
   } else {
     optMat <- theta
   }
@@ -33,7 +35,7 @@ rimSearch <- function(
   modList <- list()
   
   # Compute first model:
-  curMod <- rim(data=data,lambda=lambda,omega=omega,psi=psi,beta=beta,delta=delta,theta=theta,
+  curMod <- rim(data=data,lambda=lambda,omega_theta=omega_theta,omega_psi = omega_psi,psi=psi,beta=beta,delta_theta=delta_theta,delta_psi=delta_psi,theta=theta,
                 sampleSize=sampleSize,model=model)
   it <- 0
   
@@ -59,10 +61,10 @@ rimSearch <- function(
       mat <- optMat
       mat[proposals[i,1],proposals[i,2]] <- mat[proposals[i,2],proposals[i,1]] <- NA
       if (model[[1]]=="rim"){
-        propModels[[i]] <- rim(data=data,lambda=lambda,omega=mat,psi=psi,beta=beta,delta=delta,theta=theta,
+        propModels[[i]] <- rim(data=data,lambda=lambda,omega_theta=mat,delta_theta=delta_theta,delta_psi=delta_psi,psi=psi,beta=beta,theta=theta,
                                sampleSize=sampleSize,model=model)
       } else {
-        propModels[[i]] <- rim(data=data,lambda=lambda,omega=omega,psi=psi,beta=beta,delta=delta,theta=mat,
+        propModels[[i]] <- rim(data=data,lambda=lambda,omega_theta=omega_theta,omega_psi=omega_psi,delta_theta=delta_theta,delta_psi=delta_psi,psi=psi,beta=beta,theta=mat,
                                sampleSize=sampleSize,model=model)
       }
       
@@ -107,7 +109,7 @@ rimSearch <- function(
     
     optMat[proposals[best,1],proposals[best,2]] <- optMat[proposals[best,2],proposals[best,1]] <- NA
     if (model[[1]]=="rim"){
-      omega <- optMat
+      omega_theta <- optMat
     } else {
       theta <- optMat
     }
