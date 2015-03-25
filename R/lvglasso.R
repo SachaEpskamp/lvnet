@@ -229,6 +229,7 @@ Res <- list(
   niter = it, # Number of iterations used in the algorithm
   lambda = Lambda,
   theta = Theta,
+  omega_theta = K[obs, obs],
   psi = Psi
     )
 

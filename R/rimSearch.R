@@ -1,126 +1,259 @@
-## This function searches fo residual interactions/correlations given a starting structure
+# Some helper functions:
+curMat2modMat <- function(x, matrix){
+  x <- ifelse(x,NA,0)
+  if (grepl("omega",matrix)){
+    diag(x) <- 0
+  } else {
+    if (matrix=="psi"){
+      diag(x) <- 1
+    } else {
+      diag(x) <- NA
+    }
+  }
+  return(x)
+}
 
 rimSearch <- function(
-  data, # Raw data or a covariance matrix
-  lambda, # Lambda design matrix. NA indicates free parameters. If missing and psi is missing, defaults to identity matrix with warning
-  beta, # Structural matrix. If missing, defaults to zero.
-  omega_theta, # Observed residual network. If missing, defaults to matrix of zeroes
-  delta_theta, # Scaling matrix, can be missing
-  omega_psi, # Latent residual network. If missing, defaults to matrix of zeroes
-  delta_psi, # Scaling matrix, can be missing
-  psi, # Latent variance-covariance matrix. If missing, defaults to free
-  theta, # Used if model = "sem". Defaults to diagonal
+  matrix = c("omega_theta","omega_psi","theta","psi"), # Matrix to optimize
+  criterion = c("BIC", "AIC"),
+  start = c("empty","full","lvglasso"),
+  lambda,
+  covmat,
   sampleSize,
-  model = c("rim","sem"),
-  method = c(
-    "chisq", # will test for significance and stop if no significant improve can be found
-    "bic", # Will minimize bic
-    "aic"), # Will minimize aic
-  alpha = 0.05,
+  ..., # Arguments sent to rim
+  lvglassoArgs = list(gamma = 0, nLambda = 20), # Arguments sent to EBIClvglasso
   verbose = TRUE
 ){
-  if (missing(omega_theta)){
-    omega_theta <- matrix(0, ncol(data), ncol(data))
-  }
-  if (missing(theta)){
-    theta <- diag(NA, ncol(data))
+  matrix <- match.arg(matrix)
+  criterion <- toupper(match.arg(criterion))
+  start <- match.arg(start)
+  
+  if (missing(lambda)){
+    stop("'lambda' argument may not be missing")
   }
   
-  if (model[[1]]=="rim"){
-    optMat <- omega_theta
+  if (start == "lvglasso" & matrix != "omega_theta"){
+    stop("start = 'lvglasso' only supports matrix = 'omega_theta'")
+  }
+  
+  Nvar <- nrow(lambda)
+  Nlat <- ncol(lambda)
+  
+  if (start == "lvglasso"){
+    
+    if (verbose){
+      message("Estimating optimal lvglasso result")
+    }
+    
+    lvglassoRes <- do.call("EBIClvglasso", c(list(S=covmat, n = sampleSize, nLatents = Nlat), lvglassoArgs  ))
+    
+    curMat <- lvglassoRes$omega_theta!=0
+    
+  } else if (matrix %in% c("omega_theta","theta")){
+    
+    curMat <- matrix(start == "full", Nvar, Nvar)
+    
   } else {
-    optMat <- theta
+    
+    curMat <- matrix(start == "full", Nlat, Nlat)
   }
   
+  # Empty model list:
   modList <- list()
   
   # Compute first model:
-  curMod <- rim(data=data,lambda=lambda,omega_theta=omega_theta,omega_psi = omega_psi,psi=psi,beta=beta,delta_theta=delta_theta,delta_psi=delta_psi,theta=theta,
-                sampleSize=sampleSize,model=model)
+  rimArgs <- list(...)
+  rimArgs$data <- covmat
+  rimArgs$sampleSize <- sampleSize
+  rimArgs$lambda <- lambda
+  rimArgs[[matrix]] <- curMat2modMat(curMat, matrix)
+  
+  if (verbose){
+    message("Estimating initial RIM model")
+  }
+  curMod <- do.call("rim", rimArgs)
   it <- 0
+  
+  upTriElements <- which(upper.tri(curMat, diag=FALSE), arr.ind=TRUE)
   
   repeat{
     it <- it + 1  
     modList <- c(modList,list(curMod))
     
-    # Compute proposals:
-    proposals <- which(!is.na(optMat) & lower.tri(optMat,diag=FALSE), arr.ind=TRUE)
-    if (nrow(proposals)==0){
-      break
-    }
-    
-    # Proposed models:
-    propModels <- list()
+    propModels <- vector("list", nrow(upTriElements))
     
     if (verbose){
       message(paste("Iteration:",it))
-      pb <- txtProgressBar(0, nrow(proposals), style = 3)
+      pb <- txtProgressBar(0, nrow(upTriElements), style = 3)
     }
     
-    for (i in seq_len(nrow(proposals))){
-      mat <- optMat
-      mat[proposals[i,1],proposals[i,2]] <- mat[proposals[i,2],proposals[i,1]] <- NA
-      if (model[[1]]=="rim"){
-        propModels[[i]] <- rim(data=data,lambda=lambda,omega_theta=mat,delta_theta=delta_theta,delta_psi=delta_psi,psi=psi,beta=beta,theta=theta,
-                               sampleSize=sampleSize,model=model)
-      } else {
-        propModels[[i]] <- rim(data=data,lambda=lambda,omega_theta=omega_theta,omega_psi=omega_psi,delta_theta=delta_theta,delta_psi=delta_psi,psi=psi,beta=beta,theta=mat,
-                               sampleSize=sampleSize,model=model)
-      }
+    for (i in seq_len(nrow(upTriElements))){
+      propMat <- curMat
+      propMat[upTriElements[i,1],upTriElements[i,2]] <- propMat[upTriElements[i,2],upTriElements[i,1]] <- 
+        !curMat[upTriElements[i,1],upTriElements[i,2]]
+      
+      rimArgs[[matrix]] <- curMat2modMat(propMat, matrix)
+      propModels[[i]] <- do.call("rim", rimArgs)
+      
       
       if (verbose){
         setTxtProgressBar(pb, i)
-      }
+      }      
     }
     if (verbose) close(pb)
     
-    curTab <- rimCompare(curMod)
-    propTab <- do.call(rimCompare,propModels)[-1,]
+    # Create table:
+    origFit <- anova(curMod)[-1,,drop=FALSE]
+    fits <- do.call(rimCompare,propModels)[-1,,drop=FALSE]
     
-    # Optimize:
-    if (method[[1]] == "chisq"){
-      chisqDiff <- curTab$Chisq[[2]] - propTab$Chisq
-      dfDiff <- curTab$Df[[2]] - propTab$Df
-      pvals <- pchisq(chisqDiff,dfDiff,lower.tail=FALSE)
-      
-      if (!any(pvals < alpha)){
-        break
-      } else {
-        best <- which.min(pvals)
-      }
-      
-    } else  if (method[[1]] == "bic"){
-      bics <- propTab$BIC
-      
-      if (!any(bics < curTab$BIC[[2]])){
-        break
-      } else {
-        best <- which.min(bics)
-      } 
-    } else  if (method[[1]] == "aic"){
-      aics <- propTab$AIC
-      
-      if (!any(aics < curTab$AIC[[2]])){
-        break
-      } else {
-        best <- which.min(aics)
-      }
-    } else stop(paste("Method",method,"not supported."))
-    
-    optMat[proposals[best,1],proposals[best,2]] <- optMat[proposals[best,2],proposals[best,1]] <- NA
-    if (model[[1]]=="rim"){
-      omega_theta <- optMat
+    # Any is better?
+    if (!any(fits[[criterion]] < origFit[[criterion]])){
+      break
     } else {
-      theta <- optMat
-    }
-    curMod <- propModels[[best]]
+      
+      # Which best?
+      best <- which.min(fits[[criterion]])
+      curMat[upTriElements[best,1],upTriElements[best,2]] <- curMat[upTriElements[best,2],upTriElements[best,1]] <- 
+        !curMat[upTriElements[best,1],upTriElements[best,2]]
+      curMod <- propModels[[best]]
+      
+    }    
   }
   
-  Results <- list(
-    best = curMod,
-    modList = modList,
-    niter = it)
-  
-  class(Results) <- c("rimSearch","list")
-  return(Results)
+    Results <- list(
+      best = curMod,
+      modList = modList,
+      niter = it)
+    
+    class(Results) <- c("rimSearch","list")
+    return(Results)
 }
+
+
+
+# ## This function searches fo residual interactions/correlations given a starting structure
+# 
+# rimSearch <- function(
+#   data, # Raw data or a covariance matrix
+#   lambda, # Lambda design matrix. NA indicates free parameters. If missing and psi is missing, defaults to identity matrix with warning
+#   beta, # Structural matrix. If missing, defaults to zero.
+#   omega_theta, # Observed residual network. If missing, defaults to matrix of zeroes
+#   delta_theta, # Scaling matrix, can be missing
+#   omega_psi, # Latent residual network. If missing, defaults to matrix of zeroes
+#   delta_psi, # Scaling matrix, can be missing
+#   psi, # Latent variance-covariance matrix. If missing, defaults to free
+#   theta, # Used if model = "sem". Defaults to diagonal
+#   sampleSize,
+#   model = c("rim","sem"),
+#   method = c(
+#     "chisq", # will test for significance and stop if no significant improve can be found
+#     "bic", # Will minimize bic
+#     "aic"), # Will minimize aic
+#   alpha = 0.05,
+#   verbose = TRUE
+# ){
+#   if (missing(omega_theta)){
+#     omega_theta <- matrix(0, ncol(data), ncol(data))
+#   }
+#   if (missing(theta)){
+#     theta <- diag(NA, ncol(data))
+#   }
+#   
+#   if (model[[1]]=="rim"){
+#     optMat <- omega_theta
+#   } else {
+#     optMat <- theta
+#   }
+#   
+#   modList <- list()
+#   
+#   # Compute first model:
+#   curMod <- rim(data=data,lambda=lambda,omega_theta=omega_theta,omega_psi = omega_psi,psi=psi,beta=beta,delta_theta=delta_theta,delta_psi=delta_psi,theta=theta,
+#                 sampleSize=sampleSize,model=model)
+#   it <- 0
+#   
+#   repeat{
+#     it <- it + 1  
+#     modList <- c(modList,list(curMod))
+#     
+#     # Compute proposals:
+#     proposals <- which(!is.na(optMat) & lower.tri(optMat,diag=FALSE), arr.ind=TRUE)
+#     if (nrow(proposals)==0){
+#       break
+#     }
+#     
+#     # Proposed models:
+#     propModels <- list()
+#     
+#     if (verbose){
+#       message(paste("Iteration:",it))
+#       pb <- txtProgressBar(0, nrow(proposals), style = 3)
+#     }
+#     
+#     for (i in seq_len(nrow(proposals))){
+#       mat <- optMat
+#       mat[proposals[i,1],proposals[i,2]] <- mat[proposals[i,2],proposals[i,1]] <- NA
+#       if (model[[1]]=="rim"){
+#         propModels[[i]] <- rim(data=data,lambda=lambda,omega_theta=mat,delta_theta=delta_theta,delta_psi=delta_psi,psi=psi,beta=beta,theta=theta,
+#                                sampleSize=sampleSize,model=model)
+#       } else {
+#         propModels[[i]] <- rim(data=data,lambda=lambda,omega_theta=omega_theta,omega_psi=omega_psi,delta_theta=delta_theta,delta_psi=delta_psi,psi=psi,beta=beta,theta=mat,
+#                                sampleSize=sampleSize,model=model)
+#       }
+#       
+#       if (verbose){
+#         setTxtProgressBar(pb, i)
+#       }
+#     }
+#     if (verbose) close(pb)
+#     
+#     curTab <- rimCompare(curMod)
+#     propTab <- do.call(rimCompare,propModels)[-1,]
+#     
+#     # Optimize:
+#     if (method[[1]] == "chisq"){
+#       chisqDiff <- curTab$Chisq[[2]] - propTab$Chisq
+#       dfDiff <- curTab$Df[[2]] - propTab$Df
+#       pvals <- pchisq(chisqDiff,dfDiff,lower.tail=FALSE)
+#       
+#       if (!any(pvals < alpha)){
+#         break
+#       } else {
+#         best <- which.min(pvals)
+#       }
+#       
+#     } else  if (method[[1]] == "bic"){
+#       bics <- propTab$BIC
+#       
+#       if (!any(bics < curTab$BIC[[2]])){
+#         break
+#       } else {
+#         best <- which.min(bics)
+#       } 
+#     } else  if (method[[1]] == "aic"){
+#       aics <- propTab$AIC
+#       
+#       if (!any(aics < curTab$AIC[[2]])){
+#         break
+#       } else {
+#         best <- which.min(aics)
+#       }
+#     } else stop(paste("Method",method,"not supported."))
+#     
+#     optMat[proposals[best,1],proposals[best,2]] <- optMat[proposals[best,2],proposals[best,1]] <- NA
+#     if (model[[1]]=="rim"){
+#       omega_theta <- optMat
+#     } else {
+#       theta <- optMat
+#     }
+#     curMod <- propModels[[best]]
+#   }
+#   
+#   Results <- list(
+#     best = curMod,
+#     modList = modList,
+#     niter = it)
+#   
+#   class(Results) <- c("rimSearch","list")
+#   return(Results)
+# }

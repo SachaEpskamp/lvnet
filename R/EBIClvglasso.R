@@ -5,6 +5,7 @@ EBIClvglasso <- function(
   n, # Sample size
   nLatents, # Number of latents
   gamma = 0.5, # EBIC parameter
+  nLambda = 100,
   lambda, 
   ... # lvglasso arguments
 ){
@@ -19,7 +20,7 @@ EBIClvglasso <- function(
   
   rho.max = max(max(S - diag(nrow(S))), -min(S - diag(nrow(S))))
   rho.min = rho.max/100
-  rho = exp(seq(log(rho.min), log(rho.max), length = 100))
+  rho = exp(seq(log(rho.min), log(rho.max), length = nLambda))
   
   lvglas_res <- lapply(rho, function(r)lvglasso(S, nLatents, r,lambda =  lambda, ...))
   

@@ -11,8 +11,7 @@ generateRIMmodel <- function(
   psi, # Latent variance-covariance matrix. If missing, defaults to free
   theta, # Used if model = "sem". Defaults to diagonal
   sampleSize,
-  name = "mod",
-  model = c("rim","sem")){
+  name = "mod"){
   
   # Check for input:
   stopifnot(is.matrix(data)|is.data.frame(data))
@@ -20,7 +19,7 @@ generateRIMmodel <- function(
   # Number of variables:
   Nvar <- ncol(data)
   
-  stopifnot(model[[1]] %in% c("rim","sem"))
+  #   stopifnot(model[[1]] %in% c("rim","sem"))
   
   # Check matrices:
   # Lambda (Default to iden if psi is missing or full if psi is not)
@@ -36,72 +35,78 @@ generateRIMmodel <- function(
   
   Nlat <- ncol(lambda)
   
-  # psi (default to freely estimable; default scaling in psi)
-  if (model[[1]] == "sem"){
-    if (missing(psi)){
-      if (missing(beta)){
-        psi <- matrix(NA, Nlat, Nlat)
-        diag(psi) <- 1
-      } else {
-        psi <- diag(1, Nlat)
-      }
-    }    
-    
-    
-    
-    # Theta (defaults to diagonal)
-    if (missing(theta)){
-      theta <- diag(NA, Nvar)
-    }
-    
-    stopifnot(isSymmetric(psi))
-    stopifnot(isSymmetric(theta))    
-    
-  } else {
-    
-    # Omega psi:
-    if (missing(omega_psi)){
-      if (missing(beta)){
-        omega_psi <- matrix(NA, Nlat, Nlat)
-        diag(omega_psi) <- 0
-      } else {
-        omega_psi <- matrix(0, Nlat, Nlat)
-      }
-    }
-    
-    
-    # omega_theta (default to null)
-    if (missing(omega_theta)){
-      omega_theta <- matrix(0, Nvar, Nvar)
-    }
-    
-    # Check omegas:
-    if (any(is.na(diag(omega_theta))) || any(diag(omega_theta)!=0)){
-      warning("'omega_theta' must have zero diagonal. Set to zero.")
-      diag(omega_theta) <- 0
-    }
-    
-    if (any(is.na(diag(omega_psi))) || any(diag(omega_psi)!=0)){
-      warning("'omega_psi' must have zero diagonal. Set to zero.")
-      diag(omega_psi) <- 0
-    }
-    
-    
-    # Delta (defaults to diagonal)
-    if (missing(delta_theta)){
-      delta_theta <- diag(NA, Nvar)
-    }
-    if (missing(delta_psi)){
-      delta_psi <- diag(1, Nlat)
-    }
-    
-    stopifnot(isSymmetric(omega_psi))
-    stopifnot(isSymmetric(omega_theta))
-    
+  # psi and omega_psi may not both be missing:
+  if(!missing(psi) & !missing(omega_psi)){
+    stop("Both 'psi' and 'omega_psi' modeled.")
   }
   
+  # Both theta and omega_theta may not be missing:
+  if(!missing(theta) & !missing(omega_theta)){
+    stop("Both 'psi' and 'omega_psi' modeled.")
+  }
+  
+  # Identify if estimation should be on psi or omega_psi:
+  estPsi <- (!missing(psi)) | (missing(psi) & missing(omega_psi))
+  
+  # Identify if estimation should be on theta or omega_theta:
+  estTheta <- (!missing(theta)) | (missing(theta) & missing(omega_theta))
+  
+  # psi (default to freely estimable; default scaling in psi)
+  if (missing(psi)){
+    if (missing(beta)){
+      psi <- matrix(NA, Nlat, Nlat)
+      diag(psi) <- 1
+    } else {
+      psi <- diag(1, Nlat)
+    }
+  } 
   
   
+  # Theta (defaults to diagonal)
+  if (missing(theta)){
+    theta <- diag(NA, Nvar)
+  }
+  
+  stopifnot(isSymmetric(psi))
+  stopifnot(isSymmetric(theta))    
+  
+  
+  # Omega psi:
+  if (missing(omega_psi)){
+    if (missing(beta)){
+      omega_psi <- matrix(NA, Nlat, Nlat)
+      diag(omega_psi) <- 0
+    } else {
+      omega_psi <- matrix(0, Nlat, Nlat)
+    }
+  }
+  
+  # omega_theta (default to null)
+  if (missing(omega_theta)){
+    omega_theta <- matrix(0, Nvar, Nvar)
+  }
+  
+  # Check omegas:
+  if (any(is.na(diag(omega_theta))) || any(diag(omega_theta)!=0)){
+    warning("'omega_theta' must have zero diagonal. Set to zero.")
+    diag(omega_theta) <- 0
+  }
+  
+  if (any(is.na(diag(omega_psi))) || any(diag(omega_psi)!=0)){
+    warning("'omega_psi' must have zero diagonal. Set to zero.")
+    diag(omega_psi) <- 0
+  }
+  
+  # Delta (defaults to diagonal)
+  if (missing(delta_theta)){
+    delta_theta <- diag(NA, Nvar)
+  }
+  if (missing(delta_psi)){
+    delta_psi <- diag(1, Nlat)
+  }
+  
+  stopifnot(isSymmetric(omega_psi))
+  stopifnot(isSymmetric(omega_theta))
   
   # Beta (defaults to null)
   if (missing(beta)){
@@ -142,53 +147,6 @@ generateRIMmodel <- function(
   Mx_means <- OpenMx::mxMatrix(type = "Full", nrow = 1, ncol = ncol(data), values=0, 
                                free=FALSE, name = "means", dimnames = list("mean",colnames(data))
   )
-  
-  #     # Sample covariances:
-  #     Mx_S <- OpenMx::mxMatrix(
-  #       type = "Symm",
-  #       nrow = nrow(covMat),
-  #       ncol = ncol(covMat),
-  #       free = FALSE,
-  #       values = covMat,
-  #       name = "S"
-  #       )
-  #   
-  #     # Number of parameters:
-  #     if (model[[1]] == "rim"){
-  #       nPar <- 
-  #         sum(is.na(lambda)) + 
-  #           sum(is.na(psi)&upper.tri(psi,diag=TRUE)) + 
-  #           sum(is.na(delta)) + 
-  #           sum(is.na(omega)&upper.tri(omega,diag=TRUE)) + 
-  #           sum(is.na(beta))
-  #   
-  #     } else {
-  #       nPar <- 
-  #         sum(is.na(lambda)) + 
-  #           sum(is.na(psi)&upper.tri(psi,diag=TRUE)) + 
-  #           sum(is.na(theta)&upper.tri(theta,diag=TRUE)) +
-  #           sum(is.na(beta))
-  #   
-  #     }
-  #     Mx_p <- OpenMx::mxMatrix(
-  #       type = "Full",
-  #       nrow = 1,
-  #       ncol = 1,
-  #       free = FALSE,
-  #       values = Nvar,
-  #       name = "p"
-  #       )
-  # 
-  #     Mx_n <- OpenMx::mxMatrix(
-  #         type = "Full",
-  #         nrow=1,
-  #         ncol=1,
-  #         free=FALSE,
-  #         value = sampleSize,
-  #         name = "n"
-  #       )
-  #   
-  ### MODEL MATRICES ###
   
   ### RIM AND SEM ###
   
@@ -236,9 +194,9 @@ generateRIMmodel <- function(
   # Fit function:
   fitFunction <- OpenMx::mxFitFunctionML()
   
-  ### SEM MODEL ####
-  if (model[[1]] == "sem"){
-    # Psi:
+  # Psi and omega_psi:
+  if (estPsi){
+    
     Mx_psi <- OpenMx::mxMatrix(
       type = "Symm",
       nrow = nrow(psi),
@@ -249,63 +207,17 @@ generateRIMmodel <- function(
       name = "psi"
     )
     
-    
-    # Theta:
-    Mx_theta <- OpenMx::mxMatrix(
-      type = "Symm",
-      nrow = nrow(theta),
-      ncol = ncol(theta),
-      free = is.na(theta),
-      values = diag(nrow(theta)),
-      name = "theta"
+    Mx_delta_psi <- OpenMx::mxAlgebra(
+      vec2diag(sqrt(diag2vec(solve(psi)))),
+      name = "delta_psi"
     )
     
-    # SEM model:
-    Mx_sigma <- OpenMx::mxAlgebra(
-      lambda %*% solve(I_lat - beta) %*% psi %*% t(solve(I_lat - beta)) %*% t(lambda) + theta, 
-      name = "sigma",
-      dimnames = list(colnames(data),colnames(data)))
-    
-    
-    Mx_model <- OpenMx::mxModel(
-      name = name,
-      Mx_data,
-      Mx_means,
-      Mx_lambda,
-      Mx_psi,
-      Mx_identity_lat,
-      Mx_theta,
-      Mx_beta,
-      Mx_sigma,
-      expFunction,
-      fitFunction
+    Mx_omega_psi <- OpenMx::mxAlgebra(
+      I_lat - delta_psi %*% solve(psi) %*% delta_psi,
+      name = "omega_psi"
     )
     
   } else {
-    ### RIM MODEL
-    # Delta:
-    Mx_delta_theta <- OpenMx::mxMatrix(
-      type = "Diag",
-      nrow = nrow(delta_theta),
-      ncol = ncol(delta_theta),
-      free = is.na(delta_theta),
-      values = ifelse(is.na(delta_theta),1,delta_theta),
-      lbound = 0,
-      name = "delta_theta"
-    )
-    
-    # Omega:
-    Mx_omega_theta <- OpenMx::mxMatrix(
-      type = "Symm",
-      nrow = nrow(omega_theta),
-      ncol = ncol(omega_theta),
-      free = is.na(omega_theta),
-      values = 0,
-      lbound = ifelse(diag(nrow(omega_theta)) == 1,0, -1),
-      ubound = ifelse(diag(nrow(omega_theta)) == 1,0, 1),
-      name = "omega_theta"
-    )
-    
     
     Mx_delta_psi <- OpenMx::mxMatrix(
       type = "Diag",
@@ -329,18 +241,79 @@ generateRIMmodel <- function(
       name = "omega_psi"
     )
     
+    Mx_psi <- OpenMx::mxAlgebra(
+      delta_psi %*% solve(I_lat - omega_psi) %*% delta_psi,
+      name = "psi"
+    )
+  }
+  
+  # Theta and omega_theta:
+  if (estTheta){
     
-    # RIM model:
-    Mx_sigma <- OpenMx::mxAlgebra(
-      lambda %*% solve(I_lat - beta) %*% delta_psi %*% solve(I_lat - omega_psi) %*% delta_psi %*% t(solve(I_lat - beta)) %*% t(lambda) + delta_theta %*% solve(I_obs - omega_theta) %*% delta_theta, 
-      name = "sigma",
-      dimnames = list(colnames(data),colnames(data)))
+    Mx_theta <- OpenMx::mxMatrix(
+      type = "Symm",
+      nrow = nrow(theta),
+      ncol = ncol(theta),
+      free = is.na(theta),
+      values = diag(nrow(theta)),
+      name = "theta"
+    )
     
+    Mx_delta_theta <- OpenMx::mxAlgebra(
+      vec2diag(sqrt(diag2vec(solve(theta)))),
+      name = "delta_theta"
+    )
+    
+    Mx_omega_theta <- OpenMx::mxAlgebra(
+      I_lat - delta_theta %*% solve(theta) %*% delta_theta,
+      name = "omega_theta"
+    )
+    
+  } else {
+    
+    # Delta:
+    Mx_delta_theta <- OpenMx::mxMatrix(
+      type = "Diag",
+      nrow = nrow(delta_theta),
+      ncol = ncol(delta_theta),
+      free = is.na(delta_theta),
+      values = ifelse(is.na(delta_theta),1,delta_theta),
+      lbound = 0,
+      name = "delta_theta"
+    )
+    
+    # Omega:
+    Mx_omega_theta <- OpenMx::mxMatrix(
+      type = "Symm",
+      nrow = nrow(omega_theta),
+      ncol = ncol(omega_theta),
+      free = is.na(omega_theta),
+      values = 0,
+      lbound = ifelse(diag(nrow(omega_theta)) == 1,0, -1),
+      ubound = ifelse(diag(nrow(omega_theta)) == 1,0, 1),
+      name = "omega_theta"
+    )
+    
+    Mx_theta <- OpenMx::mxAlgebra(
+      delta_theta %*% solve(I_obs - omega_theta) %*% delta_theta,
+      name = "theta"
+    )
+  }
+
+  # Implied covariance:
+  Mx_sigma <- OpenMx::mxAlgebra(
+    lambda %*% solve(I_lat - beta) %*% psi %*% t(solve(I_lat - beta)) %*% t(lambda) + theta, 
+    name = "sigma",
+    dimnames = list(colnames(data),colnames(data)))
+  
+  ### Model:
     Mx_model <- OpenMx::mxModel(
       name = name,
       Mx_data,
       Mx_means,
       Mx_lambda,
+      Mx_theta,
+      Mx_psi,
       Mx_delta_theta,
       Mx_omega_theta,
       Mx_delta_psi,
@@ -353,9 +326,8 @@ generateRIMmodel <- function(
       fitFunction
     )
     
-  }
+
   
- 
   
   return(Mx_model)
 }

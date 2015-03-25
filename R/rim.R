@@ -10,8 +10,7 @@ rim <- function(
   delta_psi, # Scaling matrix, can be missing
   psi, # Latent variance-covariance matrix. If missing, defaults to free
   theta, # Used if model = "sem". Defaults to diagonal
-  sampleSize,
-  model = c("rim","sem")){
+  sampleSize){
   
   Nvar <- ncol(data)
   
@@ -27,66 +26,35 @@ rim <- function(
     beta = beta,
     theta = theta,
     sampleSize = sampleSize,
-    name = "model",
-    model = model[[1]])
+    name = "model")
+
   
   fitMod <- mxRun(mod, silent = TRUE,
                   suppressWarnings = TRUE)
   
   # Saturated model:
-  if (model[[1]] == "rim"){
-    satMod <- generateRIMmodel(
-      data = data, 
-      lambda = diag(Nvar), 
-      omega_psi = matrix(NA, Nvar, Nvar),
-      omega_theta = matrix(0, Nvar,Nvar),
-      delta_psi = diag(NA, Nvar),
-      delta_theta = matrix(0, Nvar,Nvar),
-      name = "saturated",
-      model = "rim",
-      sampleSize = sampleSize
-    )
-  } else {
-    satMod <- generateRIMmodel(
-      data = data, 
-      lambda = diag(Nvar), 
-      psi = matrix(NA,Nvar,Nvar), 
-      theta = matrix(0, Nvar,Nvar), 
-      name = "saturated",
-      model = "sem",
-      sampleSize = sampleSize
-    )
-  }
+  satMod <- generateRIMmodel(
+    data = data, 
+    lambda = diag(Nvar), 
+    psi = matrix(NA,Nvar,Nvar), 
+    theta = matrix(0, Nvar,Nvar), 
+    name = "saturated",
+    sampleSize = sampleSize
+  )
   
   
   fitSat <- mxRun(satMod, silent = TRUE,
                   suppressWarnings = TRUE)
   
   # Independence model:
-  if (model[[1]] == "rim"){
-    indMod <- generateRIMmodel(
-      data = data, 
-      lambda = diag(Nvar), 
-      psi = diag(NA, Nvar, Nvar), 
-      omega_psi = matrix(0, Nvar, Nvar),
-      omega_theta = matrix(0, Nvar,Nvar),
-      delta_psi = diag(NA, Nvar),
-      delta_theta = matrix(0, Nvar,Nvar),
-      name = "independence",
-      model = "rim",
-      sampleSize = sampleSize
-    )
-  } else {
-    indMod <- generateRIMmodel(
-      data = data, 
-      lambda = diag(Nvar), 
-      psi = diag(NA, Nvar, Nvar), 
-      theta = matrix(0, Nvar, Nvar), 
-      name = "independence",
-      model = "sem",
-      sampleSize = sampleSize
-    )
-  }
+  indMod <- generateRIMmodel(
+    data = data, 
+    lambda = diag(Nvar), 
+    psi = diag(NA, Nvar, Nvar), 
+    theta = matrix(0, Nvar, Nvar), 
+    name = "independence",
+    sampleSize = sampleSize
+  )
   
   fitInd <- mxRun(indMod, silent = TRUE,
                   suppressWarnings = TRUE)
@@ -95,27 +63,13 @@ rim <- function(
     sampleSize <- nrow(data)
   }
   
-  
-  #   
-  #   sum <- summary(fitMod, SaturatedLikelihood = fitSat, IndependenceLikelihood = fitInd,
-  #           numObs = sampleSize,
-  #           numStats = Nvar*(Nvar+1)/2,
-  #           IndependenceDoF = Nvar*(Nvar-1)/2,
-  #           SaturatedDoF = 0)
+  # Estract estimated matrices:
+  Matrices <- c(lapply(fitMod$matrices,'slot','values'),
+  lapply(fitMod$algebras,'slot','result'))
   
   ### COMPUTE RESULTS ###
   Results <- list(
-    matrices = list(
-      lambda = fitMod$matrices$lambda$values,
-      psi = fitMod$matrices$psi$values,
-      omega_theta = fitMod$matrices$omega_theta$values,
-      delta_theta = fitMod$matrices$delta_theta$values,
-      omega_psi = fitMod$matrices$omega_psi$values,
-      delta_psi = fitMod$matrices$delta_psi$values,
-      theta = fitMod$matrices$theta$values,
-      beta =  fitMod$matrices$beta$values,
-      sigma = fitMod$algebras$sigma$result  
-    ),
+    matrices = Matrices,
     sampleStats = list(
       covMat = fitMod$data@observed,
       sampleSize = sampleSize
@@ -124,8 +78,7 @@ rim <- function(
       model = fitMod,
       independence = fitInd,
       saturated = fitSat),
-    fitMeasures = list(),
-    model = model
+    fitMeasures = list()
   )
   
   sigma <- Results$matrices$sigma
@@ -181,18 +134,18 @@ rim <- function(
     (pchisq(Tm, df=dfm, ncp=lambda) - 0.05)
   }
   if(is.na(Tm) || is.na(dfm)) {
-      Results$fitMeasures$rmsea.ci.upper <- NA
+    Results$fitMeasures$rmsea.ci.upper <- NA
   } else if(dfm < 1 || upper.lambda(N.RMSEA) > 0 || upper.lambda(0) < 0) {
-      Results$fitMeasures$rmsea.ci.upper <- 0
+    Results$fitMeasures$rmsea.ci.upper <- 0
   } else {
     lambda.u <- try(uniroot(f=upper.lambda, lower=0,upper=N.RMSEA)$root,
                     silent=TRUE)
     if(inherits(lambda.u, "try-error")) { lambda.u <- NA }
-  
-        Results$fitMeasures$rmsea.ci.upper <- sqrt( lambda.u/(sampleSize*dfm) )
+    
+    Results$fitMeasures$rmsea.ci.upper <- sqrt( lambda.u/(sampleSize*dfm) )
   }
   
-    Results$fitMeasures$rmsea.pvalue <- 
+  Results$fitMeasures$rmsea.pvalue <- 
     1 - pchisq(Tm, df=dfm, ncp=(sampleSize*dfm*0.05^2))
   
   # RMR:
@@ -207,7 +160,7 @@ rim <- function(
   
   
   # information criteria:
-
+  
   # Saturated log-likelihood:
   c <- sampleSize*Nvar/2 * log(2 * pi)
   satLL <- ( -c -(sampleSize/2) * log(det(S)) - (sampleSize/2)*Nvar )
@@ -227,7 +180,7 @@ rim <- function(
   N.star <- (sampleSize + 2) / 24
   BIC2 <- -2*LL + Results$fitMeasures$npar * log(N.star)
   Results$fitMeasures$bic2 <- BIC2
-
+  
   
   
   class(Results) <- "rim"

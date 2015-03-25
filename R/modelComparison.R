@@ -21,8 +21,8 @@ rimCompare <- function(...){
   
   rownames(DF) <- c("Saturated",names(rimObjects))
   
-  DF[['Chisq diff']] <- c(NA,diff(DF[['Chisq']]))
-  DF[['Df diff']] <- c(NA,diff(DF[['Df']]))
+  DF[['Chisq diff']] <- c(NA,abs(diff(DF[['Chisq']])))
+  DF[['Df diff']] <- c(NA,abs(diff(DF[['Df']])))
   DF[['Pr(>Chisq)']] <- pchisq( DF[['Chisq diff']], DF[['Df diff']], lower.tail=FALSE)
 
   return(DF)
