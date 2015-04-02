@@ -10,7 +10,9 @@ rim <- function(
   delta_psi, # Scaling matrix, can be missing
   psi, # Latent variance-covariance matrix. If missing, defaults to free
   theta, # Used if model = "sem". Defaults to diagonal
-  sampleSize){
+  sampleSize,
+  fitInd,
+  fitSat){
   
   Nvar <- ncol(data)
   
@@ -32,33 +34,37 @@ rim <- function(
   fitMod <- mxRun(mod, silent = TRUE,
                   suppressWarnings = TRUE)
   
-  # Saturated model:
-  satMod <- generateRIMmodel(
-    data = data, 
-    lambda = diag(Nvar), 
-    psi = matrix(NA,Nvar,Nvar), 
-    theta = matrix(0, Nvar,Nvar), 
-    name = "saturated",
-    sampleSize = sampleSize
-  )
+  if (missing(fitSat)){
+    # Saturated model:
+    satMod <- generateRIMmodel(
+      data = data, 
+      lambda = diag(Nvar), 
+      psi = matrix(NA,Nvar,Nvar), 
+      theta = matrix(0, Nvar,Nvar), 
+      name = "saturated",
+      sampleSize = sampleSize
+    )
+    
+    
+    fitSat <- mxRun(satMod, silent = TRUE,
+                    suppressWarnings = TRUE)  
+  }
   
-  
-  fitSat <- mxRun(satMod, silent = TRUE,
-                  suppressWarnings = TRUE)
-  
-  # Independence model:
-  indMod <- generateRIMmodel(
-    data = data, 
-    lambda = diag(Nvar), 
-    psi = diag(NA, Nvar, Nvar), 
-    theta = matrix(0, Nvar, Nvar), 
-    name = "independence",
-    sampleSize = sampleSize
-  )
-  
-  fitInd <- mxRun(indMod, silent = TRUE,
-                  suppressWarnings = TRUE)
-  
+  if (missing(fitInd)){
+    # Independence model:
+    indMod <- generateRIMmodel(
+      data = data, 
+      lambda = diag(Nvar), 
+      psi = diag(NA, Nvar, Nvar), 
+      theta = matrix(0, Nvar, Nvar), 
+      name = "independence",
+      sampleSize = sampleSize
+    )
+    
+    fitInd <- mxRun(indMod, silent = TRUE,
+                    suppressWarnings = TRUE)
+  }
+
   if (missing(sampleSize)){
     sampleSize <- nrow(data)
   }
@@ -138,9 +144,11 @@ rim <- function(
   } else if(dfm < 1 || upper.lambda(N.RMSEA) > 0 || upper.lambda(0) < 0) {
     Results$fitMeasures$rmsea.ci.upper <- 0
   } else {
+    sink(tempfile())
     lambda.u <- try(uniroot(f=upper.lambda, lower=0,upper=N.RMSEA)$root,
                     silent=TRUE)
-    if(inherits(lambda.u, "try-error")) { lambda.u <- NA }
+    sink()
+    if(inherits(lambda.u, "try-error")) {lambda.u <- NA }
     
     Results$fitMeasures$rmsea.ci.upper <- sqrt( lambda.u/(sampleSize*dfm) )
   }

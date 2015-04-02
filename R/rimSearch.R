@@ -22,7 +22,8 @@ rimSearch <- function(
   sampleSize,
   ..., # Arguments sent to rim
   lvglassoArgs = list(gamma = 0, nLambda = 20), # Arguments sent to EBIClvglasso
-  verbose = TRUE
+  verbose = TRUE,
+  file # If not missing, reads file to continue and stores results to file.
 ){
   matrix <- match.arg(matrix)
   criterion <- toupper(match.arg(criterion))
@@ -74,11 +75,17 @@ rimSearch <- function(
   curMod <- do.call("rim", rimArgs)
   it <- 0
   
+  rimArgs$fitInd <- curMod$mxResults$independence
+  rimArgs$fitSat <- curMod$mxResults$saturated
+  
   upTriElements <- which(upper.tri(curMat, diag=FALSE), arr.ind=TRUE)
   
   repeat{
     it <- it + 1  
     modList <- c(modList,list(curMod))
+    if (!missing(file)){
+      save(modList,it,curMod,rimArgs,curMat,file=file)
+    }
     
     propModels <- vector("list", nrow(upTriElements))
     
