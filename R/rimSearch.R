@@ -16,21 +16,24 @@ curMat2modMat <- function(x, matrix){
 rimSearch <- function(
   matrix = c("omega_theta","omega_psi","theta","psi"), # Matrix to optimize
   criterion = c("BIC", "AIC"),
-  start = c("empty","full","lvglasso"),
+  start = c("default","empty","full","lvglasso","glasso"),
   lambda,
   covmat,
   sampleSize,
   ..., # Arguments sent to rim
   lvglassoArgs = list(gamma = 0, nLambda = 20), # Arguments sent to EBIClvglasso
+  glassoArgs = list(gamma = 0, nlambda = 100), # Arguments sent to EBICglasso
   verbose = TRUE,
-  file # If not missing, reads file to continue and stores results to file.
+  file, # If not missing, reads file to continue and stores results to file.
+  startValues = list()
 ){
   matrix <- match.arg(matrix)
   criterion <- toupper(match.arg(criterion))
   start <- match.arg(start)
   
   if (missing(lambda)){
-    stop("'lambda' argument may not be missing")
+    message("Fitting network without latent variables")
+    lambda <- matrix(,ncol(covmat),0)
   }
   
   if (start == "lvglasso" & matrix != "omega_theta"){
@@ -40,6 +43,19 @@ rimSearch <- function(
   Nvar <- nrow(lambda)
   Nlat <- ncol(lambda)
   
+  # Select start:
+  if(start=="default"){
+    if (matrix=="omega_theta"){
+      if (Nlat > 0){
+        start <- "lvglasso"
+      } else {
+        start <- "glasso"
+      }
+    } else {
+      start <- "empty"
+    }
+  }
+  
   if (start == "lvglasso"){
     
     if (verbose){
@@ -47,8 +63,18 @@ rimSearch <- function(
     }
     
     lvglassoRes <- do.call("EBIClvglasso", c(list(S=covmat, n = sampleSize, nLatents = Nlat), lvglassoArgs  ))
-    
+    startValues$omega_theta <- lvglassoRes$omega_theta
     curMat <- lvglassoRes$omega_theta!=0
+    
+  } else if (start == "glasso"){
+    
+    if (verbose){
+      message("Estimating optimal glasso result")
+    }
+    
+    glassoRes <- do.call(qgraph::EBICglasso, c(list(S=covmat, n = sampleSize), glassoArgs ))
+    startValues$omega_theta <- glassoRes
+    curMat <- glassoRes!=0
     
   } else if (matrix %in% c("omega_theta","theta")){
     
@@ -58,7 +84,7 @@ rimSearch <- function(
     
     curMat <- matrix(start == "full", Nlat, Nlat)
   }
-  
+
   # Empty model list:
   modList <- list()
   
@@ -68,6 +94,7 @@ rimSearch <- function(
   rimArgs$sampleSize <- sampleSize
   rimArgs$lambda <- lambda
   rimArgs[[matrix]] <- curMat2modMat(curMat, matrix)
+  rimArgs$startValues <- startValues
   
   if (verbose){
     message("Estimating initial RIM model")
@@ -81,6 +108,7 @@ rimSearch <- function(
   upTriElements <- which(upper.tri(curMat, diag=FALSE), arr.ind=TRUE)
   
   repeat{
+    curEst <- curMod$matrices[[matrix]]
     it <- it + 1  
     modList <- c(modList,list(curMod))
     if (!missing(file)){
@@ -100,6 +128,7 @@ rimSearch <- function(
         !curMat[upTriElements[i,1],upTriElements[i,2]]
       
       rimArgs[[matrix]] <- curMat2modMat(propMat, matrix)
+      rimArgs$startValues[[matrix]] <- curEst * propMat
       propModels[[i]] <- do.call("rim", rimArgs)
       
       

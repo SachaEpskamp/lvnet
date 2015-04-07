@@ -1,4 +1,12 @@
-
+start <- function(mat,list,alt){
+  if (!is.null(list[[mat]])){
+    return(list[[mat]])
+  } else {
+    return(alt)
+  }
+}
+  
+  
 # Model matrices should contain NA for free elements and a value for fixed elements.
 generateRIMmodel <- function(
   data, # Raw data or a covariance matrix
@@ -11,8 +19,9 @@ generateRIMmodel <- function(
   psi, # Latent variance-covariance matrix. If missing, defaults to free
   theta, # Used if model = "sem". Defaults to diagonal
   sampleSize,
-  name = "mod"){
-  
+  name = "mod",
+  startValues = list()){
+
   # Check for input:
   stopifnot(is.matrix(data)|is.data.frame(data))
   
@@ -24,12 +33,12 @@ generateRIMmodel <- function(
   # Check matrices:
   # Lambda (Default to iden if psi is missing or full if psi is not)
   if (missing(lambda)){
-    if (model[[1]] == "sem" && !missing(psi)){
+    if (!missing(psi)){
       lambda <- matrix(NA, Nvar, ncol(psi))
-    } else if (model[[1]] == "rim" && !missing(omega_psi)){
+    } else if (!missing(omega_psi)){
       lambda <- matrix(NA, Nvar, ncol(omega_psi))
     } else {
-      lambda <- diag(Nvar)
+      lambda <- matrix(,Nvar,0)
     }
   }
   
@@ -149,27 +158,44 @@ generateRIMmodel <- function(
   )
   
   ### RIM AND SEM ###
-  
   # Lambda:
-  Mx_lambda <- OpenMx::mxMatrix(
-    type = "Full",
-    nrow = nrow(lambda),
-    ncol = ncol(lambda),
-    free = is.na(lambda),
-    values = ifelse(is.na(lambda),1,lambda),
-    name = "lambda"
-  )
-  
+  if (Nlat > 0){
+
+    Mx_lambda <- OpenMx::mxMatrix(
+      type = "Full",
+      nrow = nrow(lambda),
+      ncol = ncol(lambda),
+      free = is.na(lambda),
+      values = start("lambda",startValues,ifelse(is.na(lambda),1,lambda)),
+      name = "lambda"
+    )
+  } else {
+    Mx_lambda <- OpenMx::mxMatrix(
+      type = "Full",
+      nrow = nrow(lambda),
+      ncol = ncol(lambda),
+      name = "lambda"
+    )  
+  } 
   
   # Beta:
-  Mx_beta <- OpenMx::mxMatrix(
-    type = "Full",
-    nrow = nrow(beta),
-    ncol = ncol(beta),
-    free = is.na(beta),
-    values = 0,
-    name = "beta"
-  )
+  if (Nlat > 0){
+    Mx_beta <- OpenMx::mxMatrix(
+      type = "Full",
+      nrow = nrow(beta),
+      ncol = ncol(beta),
+      free = is.na(beta),
+      values = start("beta",startValues,0),
+      name = "beta"
+    )
+  } else {
+    Mx_beta <- OpenMx::mxMatrix(
+      type = "Full",
+      nrow = nrow(beta),
+      ncol = ncol(beta),
+      name = "beta"
+    )
+  }
   
   
   Mx_identity_lat <- OpenMx::mxMatrix(
@@ -196,17 +222,25 @@ generateRIMmodel <- function(
   
   # Psi and omega_psi:
   if (estPsi){
-    
-    Mx_psi <- OpenMx::mxMatrix(
-      type = "Symm",
-      nrow = nrow(psi),
-      ncol = ncol(psi),
-      free = is.na(psi),
-      values = ifelse(is.na(psi),diag(ncol(psi)),psi),
-      lbound = ifelse(diag(nrow(psi)) == 1, 0, NA),
-      name = "psi"
-    )
-    
+    if (Nlat > 0){
+      Mx_psi <- OpenMx::mxMatrix(
+        type = "Symm",
+        nrow = nrow(psi),
+        ncol = ncol(psi),
+        free = is.na(psi),
+        values = start("psi",startValues,ifelse(is.na(psi),diag(ncol(psi)),psi)),
+        lbound = ifelse(diag(nrow(psi)) == 1, 0, NA),
+        name = "psi"
+      )
+    } else {
+      Mx_psi <- OpenMx::mxMatrix(
+        type = "Symm",
+        nrow = nrow(psi),
+        ncol = ncol(psi),
+        name = "psi"
+      )
+    }
+
     Mx_delta_psi <- OpenMx::mxAlgebra(
       vec2diag(sqrt(diag2vec(solve(psi)))),
       name = "delta_psi"
@@ -224,22 +258,21 @@ generateRIMmodel <- function(
       nrow = nrow(delta_psi),
       ncol = ncol(delta_psi),
       free = is.na(delta_psi),
-      values = ifelse(is.na(delta_psi),1,delta_psi),
+      values = start("delta_psi",startValues,ifelse(is.na(delta_psi),1,delta_psi)),
       lbound = 0,
       name = "delta_psi"
     )
     
     # Omega:
-    Mx_omega_psi <- OpenMx::mxMatrix(
-      type = "Symm",
-      nrow = nrow(omega_psi),
-      ncol = ncol(omega_psi),
-      free = is.na(omega_psi),
-      values = 0,
-      lbound = ifelse(diag(nrow(omega_psi)) == 1,0, -1),
-      ubound = ifelse(diag(nrow(omega_psi)) == 1,0, 1),
-      name = "omega_psi"
-    )
+    if (Nlat > 0){
+      Mx_omega_psi <- OpenMx::mxMatrix(
+        type = "Symm",
+        nrow = nrow(omega_psi),
+        ncol = ncol(omega_psi),
+        name = "omega_psi"
+      )      
+    }
+
     
     Mx_psi <- OpenMx::mxAlgebra(
       delta_psi %*% solve(I_lat - omega_psi) %*% delta_psi,
@@ -255,7 +288,7 @@ generateRIMmodel <- function(
       nrow = nrow(theta),
       ncol = ncol(theta),
       free = is.na(theta),
-      values = diag(nrow(theta)),
+      values = start("theta",startValues,diag(nrow(theta))),
       name = "theta"
     )
     
@@ -265,7 +298,7 @@ generateRIMmodel <- function(
     )
     
     Mx_omega_theta <- OpenMx::mxAlgebra(
-      I_lat - delta_theta %*% solve(theta) %*% delta_theta,
+      I_obs - delta_theta %*% solve(theta) %*% delta_theta,
       name = "omega_theta"
     )
     
@@ -277,7 +310,7 @@ generateRIMmodel <- function(
       nrow = nrow(delta_theta),
       ncol = ncol(delta_theta),
       free = is.na(delta_theta),
-      values = ifelse(is.na(delta_theta),1,delta_theta),
+      values = start("delta_theta",startValues,ifelse(is.na(delta_theta),1,delta_theta)),
       lbound = 0,
       name = "delta_theta"
     )
@@ -288,7 +321,7 @@ generateRIMmodel <- function(
       nrow = nrow(omega_theta),
       ncol = ncol(omega_theta),
       free = is.na(omega_theta),
-      values = 0,
+      values = start("omega_theta",startValues,0),
       lbound = ifelse(diag(nrow(omega_theta)) == 1,0, -1),
       ubound = ifelse(diag(nrow(omega_theta)) == 1,0, 1),
       name = "omega_theta"
@@ -299,14 +332,16 @@ generateRIMmodel <- function(
       name = "theta"
     )
   }
-
-  # Implied covariance:
-  Mx_sigma <- OpenMx::mxAlgebra(
-    lambda %*% solve(I_lat - beta) %*% psi %*% t(solve(I_lat - beta)) %*% t(lambda) + theta, 
-    name = "sigma",
-    dimnames = list(colnames(data),colnames(data)))
   
-  ### Model:
+  # Implied covariance:
+  if (Nlat > 0){
+    Mx_sigma <- OpenMx::mxAlgebra(
+      lambda %*% solve(I_lat - beta) %*% psi %*% t(solve(I_lat - beta)) %*% t(lambda) + theta, 
+      name = "sigma",
+      dimnames = list(colnames(data),colnames(data)))    
+    
+    
+    ### Model:
     Mx_model <- OpenMx::mxModel(
       name = name,
       Mx_data,
@@ -325,8 +360,30 @@ generateRIMmodel <- function(
       expFunction,
       fitFunction
     )
+  } else {
+    Mx_sigma <- OpenMx::mxAlgebra(
+      theta, 
+      name = "sigma",
+      dimnames = list(colnames(data),colnames(data)))
+   
     
+    ### Model:
+    Mx_model <- OpenMx::mxModel(
+      name = name,
+      Mx_data,
+      Mx_means,
+      Mx_theta,
+      Mx_delta_theta,
+      Mx_omega_theta,
+      Mx_identity_obs,
+      Mx_sigma,
+      expFunction,
+      fitFunction
+    )
+  }
 
+  
+  
   
   
   return(Mx_model)

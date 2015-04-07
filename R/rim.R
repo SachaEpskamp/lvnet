@@ -12,7 +12,9 @@ rim <- function(
   theta, # Used if model = "sem". Defaults to diagonal
   sampleSize,
   fitInd,
-  fitSat){
+  fitSat,
+  startValues=list() # Named list of starting values
+  ){
   
   Nvar <- ncol(data)
   
@@ -28,9 +30,9 @@ rim <- function(
     beta = beta,
     theta = theta,
     sampleSize = sampleSize,
-    name = "model")
+    name = "model",
+    startValues=startValues)
 
-  
   fitMod <- mxRun(mod, silent = TRUE,
                   suppressWarnings = TRUE)
   
