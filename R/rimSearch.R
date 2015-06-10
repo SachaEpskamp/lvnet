@@ -52,7 +52,9 @@ rimSearch <- function(
         start <- "glasso"
       }
     } else {
-      start <- "empty"
+      if (matrix %in% c("psi","omega_psi")){
+        start <- "full"
+      } else start <- "empty"
     }
   }
   
@@ -84,7 +86,6 @@ rimSearch <- function(
     
     curMat <- matrix(start == "full", Nlat, Nlat)
   }
-
   # Empty model list:
   modList <- list()
   

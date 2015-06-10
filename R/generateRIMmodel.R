@@ -269,7 +269,11 @@ generateRIMmodel <- function(
         type = "Symm",
         nrow = nrow(omega_psi),
         ncol = ncol(omega_psi),
-        name = "omega_psi"
+        free = is.na(omega_psi),
+        values = start("omega_psi",startValues,0),
+        lbound = ifelse(diag(nrow(omega_psi)) == 1,0, -1),
+        ubound = ifelse(diag(nrow(omega_psi)) == 1,0, 1),
+        name = "omega_psi",
       )      
     }
 
