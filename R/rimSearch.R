@@ -15,8 +15,9 @@ curMat2modMat <- function(x, matrix){
 
 rimSearch <- function(
   matrix = c("omega_theta","omega_psi","theta","psi"), # Matrix to optimize
-  criterion = c("BIC", "AIC"),
-  start = c("default","empty","full","lvglasso","glasso"),
+  criterion = c("chisq", "BIC", "AIC"), # Chisquare will attempt to remove edge with no sig difference, and otherwise add edge with sig difference.
+  start = c("Za","empty","full","lvglasso","glasso"),
+  alpha = 0.05,
   lambda,
   covmat,
   sampleSize,
@@ -30,7 +31,7 @@ rimSearch <- function(
   matrix <- match.arg(matrix)
   criterion <- toupper(match.arg(criterion))
   start <- match.arg(start)
-  
+
   if (missing(lambda)){
     message("Fitting network without latent variables")
     lambda <- matrix(,ncol(covmat),0)
@@ -100,6 +101,7 @@ rimSearch <- function(
   if (verbose){
     message("Estimating initial RIM model")
   }
+
   curMod <- do.call("rim", rimArgs)
   it <- 0
   
@@ -143,18 +145,49 @@ rimSearch <- function(
     origFit <- anova(curMod)[-1,,drop=FALSE]
     fits <- do.call(rimCompare,propModels)[-1,,drop=FALSE]
     
-    # Any is better?
-    if (!any(fits[[criterion]] < origFit[[criterion]])){
-      break
+
+    if (criterion %in% c("AIC","BIC")){
+      fits <- fits[rowSums(is.na(fits))==0,]
+      if (nrow(fits)==0) break
+      
+      # Any is better?
+      if (!any(fits[[criterion]] < origFit[[criterion]])){
+        break
+      } else {
+        
+        # Which best?
+        best <- which.min(fits[[criterion]])
+
+        
+      }
     } else {
+
+      # Significance testing!
+      curEdge <- curMat[upper.tri(curMat,diag=FALSE)]
+
+      curChisq <- curMod$fitMeasures$chisq
+      curDF <- curMod$fitMeasures$df
       
-      # Which best?
-      best <- which.min(fits[[criterion]])
-      curMat[upTriElements[best,1],upTriElements[best,2]] <- curMat[upTriElements[best,2],upTriElements[best,1]] <- 
-        !curMat[upTriElements[best,1],upTriElements[best,2]]
-      curMod <- propModels[[best]]
-      
-    }    
+      propChisq <- fits$Chisq
+      propDF <- fits$Df
+      # First try to add an edge that improves fit significantly and the best:
+      Pvals <- pchisq(abs(curChisq-propChisq), abs(curDF - propDF), lower.tail=FALSE)
+   
+      PvalsNAmax <- ifelse(is.na(Pvals),1,Pvals)
+      PvalsNAmin <- ifelse(is.na(Pvals),0,Pvals)
+      if (any(PvalsNAmax < alpha & !curEdge)){
+        best <- which(PvalsNAmax == min(PvalsNAmax[!curEdge]))[1]
+      } else if (any(PvalsNAmin > alpha & curEdge)){
+        best <- which(PvalsNAmin == max(PvalsNAmin[curEdge]))[1]
+      } else {
+        break
+      }
+    }
+
+    curMat[upTriElements[best,1],upTriElements[best,2]] <- curMat[upTriElements[best,2],upTriElements[best,1]] <- 
+      !curMat[upTriElements[best,1],upTriElements[best,2]]
+    curMod <- propModels[[best]]
+    
   }
   
     Results <- list(

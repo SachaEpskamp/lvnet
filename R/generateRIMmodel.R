@@ -125,9 +125,9 @@ generateRIMmodel <- function(
   if (is.null(colnames(data))){
     colnames(data) <- paste0("y",seq_len(ncol(data)))
   }
-  
+
   # Mx data
-  if (ncol(data) == nrow(data) && isSymmetric(data)){
+  if (ncol(data) == nrow(data) && isSymmetric(unname(data))){
     if (missing(sampleSize)){
       stop("sampleSize needs to be assigned if input is covariance matrix.")
     }
@@ -137,7 +137,9 @@ generateRIMmodel <- function(
     #     Mx_means <- OpenMx::mxMatrix(type = "Full", nrow = 1, ncol = ncol(data), values=0, 
     #                          free=FALSE, name = "means", dimnames = list("mean",colnames(data))
     #     )
+
     covMat <- data * (sampleSize - 1)/sampleSize
+    rownames(covMat) <- colnames(covMat)
     
   } else {
     sampleSize <- nrow(data)   
