@@ -21,6 +21,7 @@ rimSearch <- function(
   lambda,
   covmat,
   sampleSize,
+  maxIter,
   ..., # Arguments sent to rim
   lvglassoArgs = list(gamma = 0, nLambda = 20), # Arguments sent to EBIClvglasso
   glassoArgs = list(gamma = 0, nlambda = 100), # Arguments sent to EBICglasso
@@ -87,6 +88,8 @@ rimSearch <- function(
     
     curMat <- matrix(start == "full", Nlat, Nlat)
   }
+  
+  if (missing(maxIter)) maxIter <- ncol(curMat) * (ncol(curMat)-1) / 2
   # Empty model list:
   modList <- list()
   
@@ -113,6 +116,10 @@ rimSearch <- function(
   repeat{
     curEst <- curMod$matrices[[matrix]]
     it <- it + 1  
+    if (it > maxIter){
+      warning("Maximum number of iterations reached")
+      break
+    }
     modList <- c(modList,list(curMod))
     if (!missing(file)){
       save(modList,it,curMod,rimArgs,curMat,file=file)
