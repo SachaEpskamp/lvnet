@@ -35,7 +35,8 @@ rim <- function(
 
   fitMod <- mxRun(mod, silent = TRUE,
                   suppressWarnings = TRUE)
-  
+
+
   if (missing(fitSat)){
     # Saturated model:
     satMod <- generateRIMmodel(

@@ -225,6 +225,34 @@ generateRIMmodel <- function(
   # Psi and omega_psi:
   if (estPsi){
     if (Nlat > 0){
+# 
+#       # Correlations
+#       Mx_psi_R <- OpenMx::mxMatrix(
+#         type = "Symm",
+#         nrow = nrow(psi),
+#         ncol = ncol(psi),
+#         free = is.na(psi) & diag(1,ncol(psi)) != 1,
+#         values = start("psi",startValues,ifelse(is.na(psi),diag(ncol(psi)),psi)),
+#         lbound = -1,
+#         ubound = 1,
+#         name = "psi_Corrs"
+#       )
+# 
+#       # Scaling:
+#       Mx_psi_D <- OpenMx::mxMatrix(
+#         type = "Diag",
+#         nrow = nrow(psi),
+#         ncol = ncol(psi),
+#         free = is.na(psi) & diag(1,ncol(psi)) == 1,
+#         values = start("psi",startValues,ifelse(is.na(psi) & diag(1,ncol(psi)) == 1,diag(ncol(psi)),ifelse(diag(1,ncol(psi)) == 1,sqrt(psi),0))),
+#         lbound = 0,
+#         name = "psi_Scaling"
+#       )
+#       
+#       Mx_psi <- OpenMx::mxAlgebra(
+#         psi_Scaling %*% psi_Corrs- min(0,(min(eigenval(psi_Corrs))-.00001)) * I_lat %*% psi_Scaling, name = "psi"
+#       )
+#       
       Mx_psi <- OpenMx::mxMatrix(
         type = "Symm",
         nrow = nrow(psi),
@@ -294,7 +322,7 @@ generateRIMmodel <- function(
       nrow = nrow(theta),
       ncol = ncol(theta),
       free = is.na(theta),
-      values = start("theta",startValues,diag(nrow(theta))),
+      values = start("theta",startValues,ifelse(is.na(theta),diag(nrow(theta)),theta)),
       name = "theta"
     )
     
@@ -339,13 +367,32 @@ generateRIMmodel <- function(
     )
   }
   
+  # Fake psi with shifted eigenvalues if needed:
+#   Mx_Psi_Positive <- OpenMx::mxAlgebra(
+#     psi - min(0,(min(eigenval(psi))-.00001)) * I_lat, name = "psi_positive"
+#   )
+#   Mx_Psi_Positive <- OpenMx::mxAlgebra(
+#     psi -0* I_lat, name = "psi_positive"
+#   )
+  # Constraint on psi:
+  # Small values for diagonal:
+  Mx_PsiDiagplus <- mxMatrix(
+    "Diag",
+    nrow(psi),
+    ncol(psi),
+    FALSE,
+    values = 1e-5,
+    name = "PsiPlus"
+  )
+  Mx_PsiCon <- mxConstraint(psi < sqrt(diag2vec(psi)) %*% sqrt(t(diag2vec(psi))) + PsiPlus)
+  
   # Implied covariance:
   if (Nlat > 0){
     Mx_sigma <- OpenMx::mxAlgebra(
       lambda %*% solve(I_lat - beta) %*% psi %*% t(solve(I_lat - beta)) %*% t(lambda) + theta, 
       name = "sigma",
       dimnames = list(colnames(data),colnames(data)))    
-    
+  
     
     ### Model:
     Mx_model <- OpenMx::mxModel(
@@ -364,7 +411,9 @@ generateRIMmodel <- function(
       Mx_beta,
       Mx_sigma,
       expFunction,
-      fitFunction
+      fitFunction,
+      Mx_PsiCon,
+      Mx_PsiDiagplus
     )
   } else {
     Mx_sigma <- OpenMx::mxAlgebra(

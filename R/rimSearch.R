@@ -16,7 +16,7 @@ curMat2modMat <- function(x, matrix){
 rimSearch <- function(
   matrix = c("omega_theta","omega_psi","theta","psi"), # Matrix to optimize
   criterion = c("chisq", "BIC", "AIC"), # Chisquare will attempt to remove edge with no sig difference, and otherwise add edge with sig difference.
-  start = c("Za","empty","full","lvglasso","glasso"),
+  start = c("default","empty","full","lvglasso","glasso"),
   alpha = 0.05,
   lambda,
   covmat,

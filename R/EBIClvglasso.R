@@ -22,10 +22,11 @@ EBIClvglasso <- function(
   rho.min = rho.max/100
   rho = exp(seq(log(rho.min), log(rho.max), length = nLambda))
   
-  lvglas_res <- lapply(rho, function(r)lvglasso(S, nLatents, r,lambda =  lambda, ...))
-  
+  lvglas_res <- lapply(rho, function(r)try(lvglasso(S, nLatents, r,lambda =  lambda, ...)))
+
+  failed <- sapply(lvglas_res,is,"try-res")
   # Likelihoods:
-  EBICs <- sapply(lvglas_res,function(res){
+  EBICs <- sapply(lvglas_res[!failed],function(res){
     C <- solve(res$w[res$observed,res$observed])
     qgraph:::EBIC(S, C, n, gamma, E = sum(res$wi[lower.tri(res$wi, diag = TRUE)] != 0))
   })
@@ -33,8 +34,8 @@ EBIClvglasso <- function(
   # Smalles EBIC:
   opt <- which.min(EBICs)
   
-  Res <- lvglas_res[[opt]]
-  Res$rho <- rho[opt]
+  Res <- lvglas_res[!failed][[opt]]
+  Res$rho <- rho[!failed][opt]
   Res$ebic <- EBICs[opt]
   
   # Return 

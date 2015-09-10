@@ -1,3 +1,10 @@
+forcePositive <- function(x){
+  if (any(eigen(x)$values<0)){
+    cov2cor(x - (min(eigen(x)$values)-.1) * diag(nrow(x)))
+  } else {
+    x
+  }
+}
 # E-step in the optimization algorithm:
 Estep <- function(
   S, # Sample covariance
@@ -88,7 +95,7 @@ lvglasso <- function(
   if (missing(nLatents)){
     stop("'nLatents' must be specified")
   }
-  
+
   nobs <- nrow(S)
   ntot <- nobs + nLatents
   
@@ -185,6 +192,9 @@ Kold <- K
     K <- as.matrix(forceSymmetric(Mstep(Sexp, obs, rho, lambda)))
     #     qgraph(wi2net(K), layout = "spring")
     
+    # If not pos def, shift eigenvalues:
+    K <- forcePositive(K)
+    
     # Check for convergence:
     if (sum(abs(cov2cor(pseudoinverse(Kold)[obs,obs]) - cov2cor(pseudoinverse(K)[obs,obs]))) < thr){
       break
@@ -206,7 +216,7 @@ Kold <- K
   
   if (is.null(rownames(S)))
   {
-    rownames(K) <-c(rownames(S),rep(paste0("F",seq_len(nLatents)))) 
+    rownames(K) <-c(paste0("x",seq_len(ncol(S))),paste0("F",seq_len(nLatents)))
   }
 
   # Partial correlations:
