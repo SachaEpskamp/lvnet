@@ -8,7 +8,7 @@ start <- function(mat,list,alt){
   
   
 # Model matrices should contain NA for free elements and a value for fixed elements.
-generateRIMmodel <- function(
+generatelvnetmodel <- function(
   data, # Raw data or a covariance matrix
   lambda, # Lambda design matrix. NA indicates free parameters. If missing and psi is missing, defaults to identity matrix with warning
   omega_theta, # Observed residual network. If missing, defaults to matrix of zeroes
@@ -28,7 +28,7 @@ generateRIMmodel <- function(
   # Number of variables:
   Nvar <- ncol(data)
   
-  #   stopifnot(model[[1]] %in% c("rim","sem"))
+  #   stopifnot(model[[1]] %in% c("lvnet","sem"))
   
   # Check matrices:
   # Lambda (Default to iden if psi is missing or full if psi is not)
@@ -159,7 +159,7 @@ generateRIMmodel <- function(
                                free=FALSE, name = "means", dimnames = list("mean",colnames(data))
   )
   
-  ### RIM AND SEM ###
+  ### lvnet AND SEM ###
   # Lambda:
   if (Nlat > 0){
 

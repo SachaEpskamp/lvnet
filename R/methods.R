@@ -1,6 +1,6 @@
-print.rim <- summary.rim <- function(object, include = c('input','chisq','infcrit','fitindices','rmsea','parests')){
+print.lvnet <- summary.lvnet <- function(object, include = c('input','chisq','infcrit','fitindices','rmsea','parests')){
   
-  cat("========== RIM ANALYSIS RESULTS ========== ")
+  cat("========== lvnet ANALYSIS RESULTS ========== ")
   
   if ('input' %in% include){
     cat(

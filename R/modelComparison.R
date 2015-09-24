@@ -1,25 +1,25 @@
-rimCompare <- function(...){
+lvnetCompare <- function(...){
  
   dots <- list(...)
   
-  # Combine rim objects:
-  rimObjects <- dots[sapply(dots,is,"rim")]
-  if (is.null(names(rimObjects))){
-    names(rimObjects) <- paste("Model",seq_along(rimObjects))
+  # Combine lvnet objects:
+  lvnetObjects <- dots[sapply(dots,is,"lvnet")]
+  if (is.null(names(lvnetObjects))){
+    names(lvnetObjects) <- paste("Model",seq_along(lvnetObjects))
   }
   
   # Create rows:
   DF <- rbind(data.frame(Df = 0, AIC = NA, 
                          BIC = NA,
                          Chisq = 0),
-              do.call(rbind,   lapply(rimObjects,function(x){
+              do.call(rbind,   lapply(lvnetObjects,function(x){
                 data.frame(Df = x$fitMeasures$df, AIC = x$fitMeasures$aic, 
                            BIC = x$fitMeasures$bic,
                            Chisq = x$fitMeasures$chisq)
               }))
               )
   
-  rownames(DF) <- c("Saturated",names(rimObjects))
+  rownames(DF) <- c("Saturated",names(lvnetObjects))
   
   DF[['Chisq diff']] <- c(NA,abs(diff(DF[['Chisq']])))
   DF[['Df diff']] <- c(NA,abs(diff(DF[['Df']])))
@@ -28,4 +28,4 @@ rimCompare <- function(...){
   return(DF)
 }
 
-anova.rim <- function(object,...) rimCompare(object,...)
+anova.lvnet <- function(object,...) lvnetCompare(object,...)

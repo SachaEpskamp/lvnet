@@ -13,7 +13,7 @@ curMat2modMat <- function(x, matrix){
   return(x)
 }
 
-rimSearch <- function(
+lvnetSearch <- function(
   matrix = c("omega_theta","omega_psi","theta","psi"), # Matrix to optimize
   criterion = c("chisq", "BIC", "AIC"), # Chisquare will attempt to remove edge with no sig difference, and otherwise add edge with sig difference.
   start = c("default","empty","full","lvglasso","glasso"),
@@ -22,7 +22,7 @@ rimSearch <- function(
   covmat,
   sampleSize,
   maxIter,
-  ..., # Arguments sent to rim
+  ..., # Arguments sent to lvnet
   lvglassoArgs = list(gamma = 0, nLambda = 20), # Arguments sent to EBIClvglasso
   glassoArgs = list(gamma = 0, nlambda = 100), # Arguments sent to EBICglasso
   verbose = TRUE,
@@ -94,22 +94,22 @@ rimSearch <- function(
   modList <- list()
   
   # Compute first model:
-  rimArgs <- list(...)
-  rimArgs$data <- covmat
-  rimArgs$sampleSize <- sampleSize
-  rimArgs$lambda <- lambda
-  rimArgs[[matrix]] <- curMat2modMat(curMat, matrix)
-  rimArgs$startValues <- startValues
+  lvnetArgs <- list(...)
+  lvnetArgs$data <- covmat
+  lvnetArgs$sampleSize <- sampleSize
+  lvnetArgs$lambda <- lambda
+  lvnetArgs[[matrix]] <- curMat2modMat(curMat, matrix)
+  lvnetArgs$startValues <- startValues
   
   if (verbose){
-    message("Estimating initial RIM model")
+    message("Estimating initial lvnet model")
   }
 
-  curMod <- do.call("rim", rimArgs)
+  curMod <- do.call("lvnet", lvnetArgs)
   it <- 0
   
-  rimArgs$fitInd <- curMod$mxResults$independence
-  rimArgs$fitSat <- curMod$mxResults$saturated
+  lvnetArgs$fitInd <- curMod$mxResults$independence
+  lvnetArgs$fitSat <- curMod$mxResults$saturated
   
   upTriElements <- which(upper.tri(curMat, diag=FALSE), arr.ind=TRUE)
   
@@ -122,7 +122,7 @@ rimSearch <- function(
     }
     modList <- c(modList,list(curMod))
     if (!missing(file)){
-      save(modList,it,curMod,rimArgs,curMat,file=file)
+      save(modList,it,curMod,lvnetArgs,curMat,file=file)
     }
     
     propModels <- vector("list", nrow(upTriElements))
@@ -137,9 +137,9 @@ rimSearch <- function(
       propMat[upTriElements[i,1],upTriElements[i,2]] <- propMat[upTriElements[i,2],upTriElements[i,1]] <- 
         !curMat[upTriElements[i,1],upTriElements[i,2]]
       
-      rimArgs[[matrix]] <- curMat2modMat(propMat, matrix)
-      rimArgs$startValues[[matrix]] <- curEst * propMat
-      propModels[[i]] <- do.call("rim", rimArgs)
+      lvnetArgs[[matrix]] <- curMat2modMat(propMat, matrix)
+      lvnetArgs$startValues[[matrix]] <- curEst * propMat
+      propModels[[i]] <- do.call("lvnet", lvnetArgs)
       
       
       if (verbose){
@@ -150,7 +150,7 @@ rimSearch <- function(
     
     # Create table:
     origFit <- anova(curMod)[-1,,drop=FALSE]
-    fits <- do.call(rimCompare,propModels)[-1,,drop=FALSE]
+    fits <- do.call(lvnetCompare,propModels)[-1,,drop=FALSE]
     
 
     if (criterion %in% c("AIC","BIC")){
@@ -202,7 +202,7 @@ rimSearch <- function(
       modList = modList,
       niter = it)
     
-    class(Results) <- c("rimSearch","list")
+    class(Results) <- c("lvnetSearch","list")
     return(Results)
 }
 
@@ -210,7 +210,7 @@ rimSearch <- function(
 
 # ## This function searches fo residual interactions/correlations given a starting structure
 # 
-# rimSearch <- function(
+# lvnetSearch <- function(
 #   data, # Raw data or a covariance matrix
 #   lambda, # Lambda design matrix. NA indicates free parameters. If missing and psi is missing, defaults to identity matrix with warning
 #   beta, # Structural matrix. If missing, defaults to zero.
@@ -221,7 +221,7 @@ rimSearch <- function(
 #   psi, # Latent variance-covariance matrix. If missing, defaults to free
 #   theta, # Used if model = "sem". Defaults to diagonal
 #   sampleSize,
-#   model = c("rim","sem"),
+#   model = c("lvnet","sem"),
 #   method = c(
 #     "chisq", # will test for significance and stop if no significant improve can be found
 #     "bic", # Will minimize bic
@@ -236,7 +236,7 @@ rimSearch <- function(
 #     theta <- diag(NA, ncol(data))
 #   }
 #   
-#   if (model[[1]]=="rim"){
+#   if (model[[1]]=="lvnet"){
 #     optMat <- omega_theta
 #   } else {
 #     optMat <- theta
@@ -245,7 +245,7 @@ rimSearch <- function(
 #   modList <- list()
 #   
 #   # Compute first model:
-#   curMod <- rim(data=data,lambda=lambda,omega_theta=omega_theta,omega_psi = omega_psi,psi=psi,beta=beta,delta_theta=delta_theta,delta_psi=delta_psi,theta=theta,
+#   curMod <- lvnet(data=data,lambda=lambda,omega_theta=omega_theta,omega_psi = omega_psi,psi=psi,beta=beta,delta_theta=delta_theta,delta_psi=delta_psi,theta=theta,
 #                 sampleSize=sampleSize,model=model)
 #   it <- 0
 #   
@@ -270,11 +270,11 @@ rimSearch <- function(
 #     for (i in seq_len(nrow(proposals))){
 #       mat <- optMat
 #       mat[proposals[i,1],proposals[i,2]] <- mat[proposals[i,2],proposals[i,1]] <- NA
-#       if (model[[1]]=="rim"){
-#         propModels[[i]] <- rim(data=data,lambda=lambda,omega_theta=mat,delta_theta=delta_theta,delta_psi=delta_psi,psi=psi,beta=beta,theta=theta,
+#       if (model[[1]]=="lvnet"){
+#         propModels[[i]] <- lvnet(data=data,lambda=lambda,omega_theta=mat,delta_theta=delta_theta,delta_psi=delta_psi,psi=psi,beta=beta,theta=theta,
 #                                sampleSize=sampleSize,model=model)
 #       } else {
-#         propModels[[i]] <- rim(data=data,lambda=lambda,omega_theta=omega_theta,omega_psi=omega_psi,delta_theta=delta_theta,delta_psi=delta_psi,psi=psi,beta=beta,theta=mat,
+#         propModels[[i]] <- lvnet(data=data,lambda=lambda,omega_theta=omega_theta,omega_psi=omega_psi,delta_theta=delta_theta,delta_psi=delta_psi,psi=psi,beta=beta,theta=mat,
 #                                sampleSize=sampleSize,model=model)
 #       }
 #       
@@ -284,8 +284,8 @@ rimSearch <- function(
 #     }
 #     if (verbose) close(pb)
 #     
-#     curTab <- rimCompare(curMod)
-#     propTab <- do.call(rimCompare,propModels)[-1,]
+#     curTab <- lvnetCompare(curMod)
+#     propTab <- do.call(lvnetCompare,propModels)[-1,]
 #     
 #     # Optimize:
 #     if (method[[1]] == "chisq"){
@@ -318,7 +318,7 @@ rimSearch <- function(
 #     } else stop(paste("Method",method,"not supported."))
 #     
 #     optMat[proposals[best,1],proposals[best,2]] <- optMat[proposals[best,2],proposals[best,1]] <- NA
-#     if (model[[1]]=="rim"){
+#     if (model[[1]]=="lvnet"){
 #       omega_theta <- optMat
 #     } else {
 #       theta <- optMat
@@ -331,6 +331,6 @@ rimSearch <- function(
 #     modList = modList,
 #     niter = it)
 #   
-#   class(Results) <- c("rimSearch","list")
+#   class(Results) <- c("lvnetSearch","list")
 #   return(Results)
 # }

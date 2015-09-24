@@ -1,6 +1,6 @@
-# Main function for confirmatory RIM
+# Main function for confirmatory lvnet
 
-rim <- function(
+lvnet <- function(
   data, # Raw data or a covariance matrix
   lambda, # Lambda design matrix. NA indicates free parameters. If missing and psi is missing, defaults to identity matrix with warning
   beta, # Structural matrix. If missing, defaults to zero.
@@ -19,7 +19,7 @@ rim <- function(
   Nvar <- ncol(data)
   
   ### Generate model:
-  mod <- generateRIMmodel(
+  mod <- generatelvnetmodel(
     data = data,
     lambda = lambda,
     omega_psi = omega_psi,
@@ -33,13 +33,13 @@ rim <- function(
     name = "model",
     startValues=startValues)
 
-  fitMod <- mxRun(mod, silent = TRUE,
+  fitMod <- OpenMx::mxRun(mod, silent = TRUE,
                   suppressWarnings = TRUE)
 
 
   if (missing(fitSat)){
     # Saturated model:
-    satMod <- generateRIMmodel(
+    satMod <- generatelvnetmodel(
       data = data, 
       lambda = diag(Nvar), 
       psi = matrix(NA,Nvar,Nvar), 
@@ -55,7 +55,7 @@ rim <- function(
   
   if (missing(fitInd)){
     # Independence model:
-    indMod <- generateRIMmodel(
+    indMod <- generatelvnetmodel(
       data = data, 
       lambda = diag(Nvar), 
       psi = diag(NA, Nvar, Nvar), 
@@ -194,7 +194,7 @@ rim <- function(
   
   
   
-  class(Results) <- "rim"
+  class(Results) <- "lvnet"
   
   return(Results)
 }

@@ -1,11 +1,13 @@
-Package: rim
+Package: lvnet
 Type: Package
-Title: Residual Interaction Modeling
+Title: Latent Variable Network Modeling
 Version: 0.1
-Date: 2015-02-22
 Author: Sacha Epskamp
 Maintainer: Sacha Epskamp <mail@sachaepskamp.com>
-Description: More about what it does (maybe more than one line)
-License: What license is it under?
+Description: Estimate Structural Equation Models (using OpenMx) with two possible 			generalizations to include Gaussian Graphical Models (GGM). GGMs 
+		can be used to model covariances between latent variables (latent 
+		network modeling; LNM) or between residuals (residual network 
+		modeling; RNM)
+License: GPL-2
 Imports: glasso, qgraph, Matrix, corpcor, psych, mvtnorm
 Depends: OpenMx
