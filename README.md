@@ -1,4 +1,4 @@
-This package This can be used to confirmatory test latent variable network models. See `?lvnet` for details.
+This package can be used to confirmatory test latent variable network models. See `?lvnet` for details.
 
 #### Example:
 ```r
