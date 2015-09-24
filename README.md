@@ -1,4 +1,11 @@
-This package can be used to confirmatory test latent variable network models. See `?lvnet` for details.
+This package can be used to confirmatory test latent variable network models. See `?lvnet` for details. To install the package, use:
+
+```r
+library("devtools")
+install_github("sachaepskamp/lvnet")
+```
+
+Requires OpenMx to be installed.
 
 #### Example:
 ```r
