@@ -4,10 +4,8 @@ Title: Latent Variable Network Modeling
 Version: 0.1
 Author: Sacha Epskamp
 Maintainer: Sacha Epskamp <mail@sachaepskamp.com>
-Description: Estimate Structural Equation Models (using OpenMx) with two possible 			generalizations to include Gaussian Graphical Models (GGM). GGMs 
-		can be used to model covariances between latent variables (latent 
-		network modeling; LNM) or between residuals (residual network 
-		modeling; RNM)
+Description: Estimate Structural Equation Models (using OpenMx) with two possible generalizations to include Gaussian Graphical Models (GGM). GGMs can be used to model covariances between latent variables (latent network modeling; LNM) or between residuals (residual network modeling; RNM).
 License: GPL-2
 Imports: glasso, qgraph, Matrix, corpcor, psych, mvtnorm
+Suggests: lavaan
 Depends: OpenMx

@@ -1,4 +1,4 @@
-print.lvnet <- summary.lvnet <- function(object, include = c('input','chisq','infcrit','fitindices','rmsea','parests')){
+summary.lvnet <- function(object, include = c('input','chisq','infcrit','fitindices','rmsea','parests'), ...){
   
   cat("========== lvnet ANALYSIS RESULTS ========== ")
   
@@ -64,3 +64,5 @@ print.lvnet <- summary.lvnet <- function(object, include = c('input','chisq','in
   }
   
 }
+
+print.lvnet <- function(x,...) summary(x,...)

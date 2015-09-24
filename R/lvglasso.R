@@ -1,3 +1,11 @@
+wi2net <- function(x)
+{
+  x <- -cov2cor(x)
+  diag(x) <- 0
+  x <- forceSymmetric(x)
+  return(x)
+}
+
 forcePositive <- function(x){
   if (any(eigen(x)$values<0)){
     cov2cor(x - (min(eigen(x)$values)-.1) * diag(nrow(x)))
@@ -12,8 +20,7 @@ Estep <- function(
   obs # Logical indicating observed
 )
 {
-  stopifnot(require("Matrix"))
-  stopifnot(isSymmetric(S))
+  stopifnot(Matrix::isSymmetric(S))
   if (missing(Kcur))
   {
     if (missing(obs)) 
@@ -24,7 +31,7 @@ Estep <- function(
       Kcur <- diag(length(obs))
     }
   }
-  stopifnot(isSymmetric(Kcur))
+  stopifnot(Matrix::isSymmetric(Kcur))
   if (missing(obs)) obs <- 1:nrow(Kcur) %in% 1:nrow(S)
   
   # To make life easier:
@@ -33,15 +40,14 @@ Estep <- function(
   
   
   # Current estimate of S:
-  library(corpcor)
-  Scur <- pseudoinverse(Kcur)
+  Scur <- corpcor::pseudoinverse(Kcur)
   
   # Expected Sigma_OH:
-  Sigma_OH <- S %*% pseudoinverse(Scur[O,O]) %*% Scur[O, H]
+  Sigma_OH <- S %*% corpcor::pseudoinverse(Scur[O,O]) %*% Scur[O, H]
   #   Sigma_OH
   
   # Expected Sigma_H:
-  Sigma_H <- Scur[H, H] - Scur[H,O] %*% pseudoinverse(Scur[O,O]) %*% Scur[O,H] + Scur[H,O] %*% pseudoinverse(Scur[O,O]) %*% S %*% pseudoinverse(Scur[O,O]) %*% Scur[O, H]
+  Sigma_H <- Scur[H, H] - Scur[H,O] %*% corpcor::pseudoinverse(Scur[O,O]) %*% Scur[O,H] + Scur[H,O] %*% corpcor::pseudoinverse(Scur[O,O]) %*% S %*% corpcor::pseudoinverse(Scur[O,O]) %*% Scur[O, H]
   
   # Construct expected sigma:
   Sigma_Exp <- rbind(cbind(S,Sigma_OH),cbind(t(Sigma_OH), Sigma_H))  
@@ -88,8 +94,7 @@ lvglasso <- function(
   rho = 0, # Penalty
   thr = 1.0e-4, # Threshold for convergence (sum absolute diff)
   maxit = 1e4, # Maximum number of iterations
-  lambda, # Logical matrix indicating the free factor loadings. Defaults to full TRUE matrix.
-  ... # qgraph arguments
+  lambda # Logical matrix indicating the free factor loadings. Defaults to full TRUE matrix.
 )
 {
   if (missing(nLatents)){
@@ -196,7 +201,7 @@ Kold <- K
     K <- forcePositive(K)
     
     # Check for convergence:
-    if (sum(abs(cov2cor(pseudoinverse(Kold)[obs,obs]) - cov2cor(pseudoinverse(K)[obs,obs]))) < thr){
+    if (sum(abs(cov2cor(corpcor::pseudoinverse(Kold)[obs,obs]) - cov2cor(corpcor::pseudoinverse(K)[obs,obs]))) < thr){
       break
     } else {
       it <- it + 1
@@ -220,7 +225,7 @@ Kold <- K
   }
 
   # Partial correlations:
-  pc <- qgraph:::wi2net(K)
+  pc <- wi2net(K)
   diag(pc) <- 1
   
 rownames(pc) <- colnames(pc) <- rownames(K) <- colnames(K)
@@ -232,7 +237,7 @@ Psi <- solve(K[!obs, !obs] - t(Lambda) %*% K[obs, obs] %*% Lambda)
 
 # Return list mimics glasso:
 Res <- list(
-  w = pseudoinverse(K), # Estimated covariance matrix
+  w = corpcor::pseudoinverse(K), # Estimated covariance matrix
   wi = K, # Estimated precision matrix
   pcor = pc, # Estimated partial correlation matrix
   observed = obs, # observed and latents indicator

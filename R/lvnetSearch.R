@@ -14,12 +14,12 @@ curMat2modMat <- function(x, matrix){
 }
 
 lvnetSearch <- function(
+  data,
   matrix = c("omega_theta","omega_psi","theta","psi"), # Matrix to optimize
   criterion = c("chisq", "BIC", "AIC"), # Chisquare will attempt to remove edge with no sig difference, and otherwise add edge with sig difference.
   start = c("default","empty","full","lvglasso","glasso"),
   alpha = 0.05,
   lambda,
-  covmat,
   sampleSize,
   maxIter,
   ..., # Arguments sent to lvnet
@@ -32,6 +32,21 @@ lvnetSearch <- function(
   matrix <- match.arg(matrix)
   criterion <- toupper(match.arg(criterion))
   start <- match.arg(start)
+  
+  if (ncol(data) == nrow(data) && isSymmetric(unname(data))){
+    if (missing(sampleSize)){
+      stop("sampleSize needs to be assigned if input is covariance matrix.")
+    }
+    
+    covmat <- data * (sampleSize - 1)/sampleSize
+    rownames(covmat) <- colnames(covmat)
+    
+  } else {
+    sampleSize <- nrow(data)   
+
+    data <- as.matrix(data)
+    covmat <- cov(data, use = "pairwise.complete.obs")* (sampleSize - 1)/sampleSize
+  }
 
   if (missing(lambda)){
     message("Fitting network without latent variables")
@@ -205,132 +220,3 @@ lvnetSearch <- function(
     class(Results) <- c("lvnetSearch","list")
     return(Results)
 }
-
-
-
-# ## This function searches fo residual interactions/correlations given a starting structure
-# 
-# lvnetSearch <- function(
-#   data, # Raw data or a covariance matrix
-#   lambda, # Lambda design matrix. NA indicates free parameters. If missing and psi is missing, defaults to identity matrix with warning
-#   beta, # Structural matrix. If missing, defaults to zero.
-#   omega_theta, # Observed residual network. If missing, defaults to matrix of zeroes
-#   delta_theta, # Scaling matrix, can be missing
-#   omega_psi, # Latent residual network. If missing, defaults to matrix of zeroes
-#   delta_psi, # Scaling matrix, can be missing
-#   psi, # Latent variance-covariance matrix. If missing, defaults to free
-#   theta, # Used if model = "sem". Defaults to diagonal
-#   sampleSize,
-#   model = c("lvnet","sem"),
-#   method = c(
-#     "chisq", # will test for significance and stop if no significant improve can be found
-#     "bic", # Will minimize bic
-#     "aic"), # Will minimize aic
-#   alpha = 0.05,
-#   verbose = TRUE
-# ){
-#   if (missing(omega_theta)){
-#     omega_theta <- matrix(0, ncol(data), ncol(data))
-#   }
-#   if (missing(theta)){
-#     theta <- diag(NA, ncol(data))
-#   }
-#   
-#   if (model[[1]]=="lvnet"){
-#     optMat <- omega_theta
-#   } else {
-#     optMat <- theta
-#   }
-#   
-#   modList <- list()
-#   
-#   # Compute first model:
-#   curMod <- lvnet(data=data,lambda=lambda,omega_theta=omega_theta,omega_psi = omega_psi,psi=psi,beta=beta,delta_theta=delta_theta,delta_psi=delta_psi,theta=theta,
-#                 sampleSize=sampleSize,model=model)
-#   it <- 0
-#   
-#   repeat{
-#     it <- it + 1  
-#     modList <- c(modList,list(curMod))
-#     
-#     # Compute proposals:
-#     proposals <- which(!is.na(optMat) & lower.tri(optMat,diag=FALSE), arr.ind=TRUE)
-#     if (nrow(proposals)==0){
-#       break
-#     }
-#     
-#     # Proposed models:
-#     propModels <- list()
-#     
-#     if (verbose){
-#       message(paste("Iteration:",it))
-#       pb <- txtProgressBar(0, nrow(proposals), style = 3)
-#     }
-#     
-#     for (i in seq_len(nrow(proposals))){
-#       mat <- optMat
-#       mat[proposals[i,1],proposals[i,2]] <- mat[proposals[i,2],proposals[i,1]] <- NA
-#       if (model[[1]]=="lvnet"){
-#         propModels[[i]] <- lvnet(data=data,lambda=lambda,omega_theta=mat,delta_theta=delta_theta,delta_psi=delta_psi,psi=psi,beta=beta,theta=theta,
-#                                sampleSize=sampleSize,model=model)
-#       } else {
-#         propModels[[i]] <- lvnet(data=data,lambda=lambda,omega_theta=omega_theta,omega_psi=omega_psi,delta_theta=delta_theta,delta_psi=delta_psi,psi=psi,beta=beta,theta=mat,
-#                                sampleSize=sampleSize,model=model)
-#       }
-#       
-#       if (verbose){
-#         setTxtProgressBar(pb, i)
-#       }
-#     }
-#     if (verbose) close(pb)
-#     
-#     curTab <- lvnetCompare(curMod)
-#     propTab <- do.call(lvnetCompare,propModels)[-1,]
-#     
-#     # Optimize:
-#     if (method[[1]] == "chisq"){
-#       chisqDiff <- curTab$Chisq[[2]] - propTab$Chisq
-#       dfDiff <- curTab$Df[[2]] - propTab$Df
-#       pvals <- pchisq(chisqDiff,dfDiff,lower.tail=FALSE)
-#       
-#       if (!any(pvals < alpha)){
-#         break
-#       } else {
-#         best <- which.min(pvals)
-#       }
-#       
-#     } else  if (method[[1]] == "bic"){
-#       bics <- propTab$BIC
-#       
-#       if (!any(bics < curTab$BIC[[2]])){
-#         break
-#       } else {
-#         best <- which.min(bics)
-#       } 
-#     } else  if (method[[1]] == "aic"){
-#       aics <- propTab$AIC
-#       
-#       if (!any(aics < curTab$AIC[[2]])){
-#         break
-#       } else {
-#         best <- which.min(aics)
-#       }
-#     } else stop(paste("Method",method,"not supported."))
-#     
-#     optMat[proposals[best,1],proposals[best,2]] <- optMat[proposals[best,2],proposals[best,1]] <- NA
-#     if (model[[1]]=="lvnet"){
-#       omega_theta <- optMat
-#     } else {
-#       theta <- optMat
-#     }
-#     curMod <- propModels[[best]]
-#   }
-#   
-#   Results <- list(
-#     best = curMod,
-#     modList = modList,
-#     niter = it)
-#   
-#   class(Results) <- c("lvnetSearch","list")
-#   return(Results)
-# }

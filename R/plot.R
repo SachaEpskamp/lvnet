@@ -1,6 +1,6 @@
 # Plotting function:
 plot.lvglasso <- function(
-  object, # lvglasso object
+  x, # lvglasso x
   plot = c("network","loadings","residcors","residpcors"), # "full" the full network, S" will plot the sparse network between items and "L" the latent loadings
   ask,
   rotation = promax, # A rotation function to be used.
@@ -10,8 +10,8 @@ plot.lvglasso <- function(
   if (missing(ask)) ask <- length(plot) > 1
   parOrig <- par()
   par(ask = ask)
-  obs <- object$observed
-  pcor <- object$pcor
+  obs <- x$observed
+  pcor <- x$pcor
   Res <- list()
   labs <- colnames(pcor)
 
@@ -20,16 +20,16 @@ plot.lvglasso <- function(
   }
   
   if ("residpcors" %in% plot){
-    Res$residpcors <- qgraph(object$pcor[object$observed,object$observed], ..., title = "Estimated residual partial correlations", shape = "square", layout = "spring", repulsion = 0.9)
+    Res$residpcors <- qgraph(x$pcor[x$observed,x$observed], ..., title = "Estimated residual partial correlations", shape = "square", layout = "spring", repulsion = 0.9)
   }
   
   if ("residcors" %in% plot){
-    Res$residcors <- qgraph(cov2cor(object$theta), ..., title = "Estimated residual correlations", shape = "square", layout = "spring", repulsion = 0.9)
+    Res$residcors <- qgraph(cov2cor(x$theta), ..., title = "Estimated residual correlations", shape = "square", layout = "spring", repulsion = 0.9)
   }
   
   if ("loadings" %in% plot){
-    fCovs <- object$psi
-    load <- object$lambda
+    fCovs <- x$psi
+    load <- x$lambda
     
     # Rotate:
     rot <- rotation(load)
@@ -42,8 +42,8 @@ plot.lvglasso <- function(
     }
     fCovs <- solve(rotmat) %*% fCovs %*% t(solve(rotmat))
     
-    rownames(load) <- colnames(object$wi)[obs]
-    Res$loadings <- qgraph.loadings(load, factorCors = fCovs, ..., title = "Estimated factor loadings", labels =  colnames(object$wi)[obs], model = "reflective")
+    rownames(load) <- colnames(x$wi)[obs]
+    Res$loadings <- qgraph.loadings(load, factorCors = fCovs, ..., title = "Estimated factor loadings", labels =  colnames(x$wi)[obs], model = "reflective")
   }
   
   
@@ -60,9 +60,9 @@ plot.lvglasso <- function(
 #     fCors <- as.matrix(pcor[!obs,!obs])
 #     load <- as.matrix(pcor[obs,!obs])
 #     
-#     rownames(load) <- colnames(object$wi)[obs]
+#     rownames(load) <- colnames(x$wi)[obs]
 #     
-#     Res$L <- qgraph.loadings(load, factorCors = fCors, arrows = FALSE,..., title = "Low-rank structure", labels =  colnames(object$wi)[obs])
+#     Res$L <- qgraph.loadings(load, factorCors = fCors, arrows = FALSE,..., title = "Low-rank structure", labels =  colnames(x$wi)[obs])
 #   }
 #   
   

@@ -21,6 +21,13 @@ generatelvnetmodel <- function(
   sampleSize,
   name = "mod",
   startValues = list()){
+  
+  # Stupid things to fool R check:
+  I_lat <- NULL
+  I_obs <- NULL
+  PsiPlus <- NULL
+  vec2diag <- NULL
+  diag2vec <- NULL
 
   # Check for input:
   stopifnot(is.matrix(data)|is.data.frame(data))
@@ -384,7 +391,7 @@ generatelvnetmodel <- function(
     values = 1e-5,
     name = "PsiPlus"
   )
-  Mx_PsiCon <- mxConstraint(psi < sqrt(diag2vec(psi)) %*% sqrt(t(diag2vec(psi))) + PsiPlus)
+  Mx_PsiCon <- OpenMx::mxConstraint(psi < sqrt(diag2vec(psi)) %*% sqrt(t(diag2vec(psi))) + PsiPlus)
   
   # Implied covariance:
   if (Nlat > 0){
