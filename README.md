@@ -1,7 +1,7 @@
-# This package This can be used to confirmatory test latent variable network models. See ?lvnet for detais!
+This package This can be used to confirmatory test latent variable network models. See `?lvnet` for details.
 
-# Example:
-
+#### Example:
+```r
 # Load package:
 library("lvnet")
 
@@ -31,3 +31,4 @@ LNM <- lvnet(Data, lambda = Lambda, omega_psi=Omega_psi)
 
 # Compare fit:
 lvnetCompare(cfa=CFA,lnm=LNM)
+```
