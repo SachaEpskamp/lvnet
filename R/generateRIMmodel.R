@@ -383,16 +383,16 @@ generatelvnetmodel <- function(
 #   )
   # Constraint on psi:
   # Small values for diagonal:
-  Mx_PsiDiagplus <- mxMatrix(
-    "Diag",
-    nrow(psi),
-    ncol(psi),
-    FALSE,
-    values = 1e-5,
-    name = "PsiPlus"
-  )
-  Mx_PsiCon <- OpenMx::mxConstraint(psi < sqrt(diag2vec(psi)) %*% sqrt(t(diag2vec(psi))) + PsiPlus)
-  
+#   Mx_PsiDiagplus <- mxMatrix(
+#     "Diag",
+#     nrow(psi),
+#     ncol(psi),
+#     FALSE,
+#     values = 1e-5,
+#     name = "PsiPlus"
+#   )
+#   Mx_PsiCon <- OpenMx::mxConstraint(psi < sqrt(diag2vec(psi)) %*% sqrt(t(diag2vec(psi))) + PsiPlus)
+#   
   # Implied covariance:
   if (Nlat > 0){
     Mx_sigma <- OpenMx::mxAlgebra(
@@ -418,9 +418,9 @@ generatelvnetmodel <- function(
       Mx_beta,
       Mx_sigma,
       expFunction,
-      fitFunction,
-      Mx_PsiCon,
-      Mx_PsiDiagplus
+      fitFunction
+      # Mx_PsiCon,
+      # Mx_PsiDiagplus
     )
   } else {
     Mx_sigma <- OpenMx::mxAlgebra(
