@@ -121,7 +121,7 @@ lvnet <- function(
   Results$fitMeasures$cfi <- ifelse(dfm > Tm, 1, 1 - (Tm - dfm)/(Tb - dfb))
   
   # RMSEA
-  Results$fitMeasures$rmsea <- sqrt( (Tm - dfm) / ((sampleSize - 1) * dfm))
+  Results$fitMeasures$rmsea <- sqrt( max(Tm - dfm,0) / ((sampleSize - 1) * dfm))
   
   # Codes for rmsea confidence interval taken from lavaan:
   lower.lambda <- function(lambda) {

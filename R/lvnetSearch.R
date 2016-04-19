@@ -23,7 +23,7 @@ lvnetSearch <- function(
   sampleSize,
   maxIter,
   ..., # Arguments sent to lvnet
-  lvglassoArgs = list(gamma = 0, nLambda = 20), # Arguments sent to EBIClvglasso
+  lvglassoArgs = list(gamma = 0, nRho = 20), # Arguments sent to EBIClvglasso
   glassoArgs = list(gamma = 0, nlambda = 100), # Arguments sent to EBICglasso
   verbose = TRUE,
   file, # If not missing, reads file to continue and stores results to file.
@@ -106,7 +106,7 @@ lvnetSearch <- function(
   
   if (missing(maxIter)) maxIter <- ncol(curMat) * (ncol(curMat)-1) / 2
   # Empty model list:
-  modList <- list()
+  # modList <- list()
   
   # Compute first model:
   lvnetArgs <- list(...)
@@ -135,9 +135,9 @@ lvnetSearch <- function(
       warning("Maximum number of iterations reached")
       break
     }
-    modList <- c(modList,list(curMod))
+    # modList <- c(modList,list(curMod))
     if (!missing(file)){
-      save(modList,it,curMod,lvnetArgs,curMat,file=file)
+      save(it,curMod,lvnetArgs,curMat,file=file)
     }
     
     propModels <- vector("list", nrow(upTriElements))
@@ -165,6 +165,7 @@ lvnetSearch <- function(
     
     # Create table:
     origFit <- anova(curMod)[-1,,drop=FALSE]
+
     fits <- do.call(lvnetCompare,propModels)[-1,,drop=FALSE]
     
 
@@ -214,7 +215,7 @@ lvnetSearch <- function(
   
     Results <- list(
       best = curMod,
-      modList = modList,
+      # modList = modList,
       niter = it)
     
     class(Results) <- c("lvnetSearch","list")
