@@ -124,6 +124,7 @@ lvnet <- function(
   Results$fitMeasures$rmsea <- sqrt( max(Tm - dfm,0) / ((sampleSize - 1) * dfm))
   
   # Codes for rmsea confidence interval taken from lavaan:
+  browser()
   lower.lambda <- function(lambda) {
     (pchisq(Tm, df=dfm, ncp=lambda) - 0.95)
   }
@@ -132,9 +133,12 @@ lvnet <- function(
   } else if(dfm < 1 || lower.lambda(0) < 0.0) {
     Results$fitMeasures$rmsea.ci.lower <- 0
   } else {
-    lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=Tm)$root,
-                    silent=TRUE)
-    if(inherits(lambda.l, "try-error")) { lambda.l <- NA }
+    if (lower.lambda(0) * lower.lambda(Tm) > 0){
+      lambda.l <- NA
+    } else {
+      lambda.l <- try(uniroot(f=lower.lambda, lower=0, upper=Tm)$root,
+                      silent=TRUE)      
+    }
     Results$fitMeasures$rmsea.ci.lower <- sqrt( lambda.l/(sampleSize*dfm) )
   }
   
