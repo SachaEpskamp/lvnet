@@ -13,18 +13,29 @@ curMat2modMat <- function(x, matrix){
   return(x)
 }
 
+maxNull <- function(x){
+  if (length(x[!is.na(x)])==0) return(0) else return(max(x,na.rm=TRUE))
+}
+
+# Search logic: TO DOCUMENT: 
+# Start with initial maxChange
+# Change min(all, maxChange) improving edges. 
+# Set maxChange to max(# changed edges - 1,1)
+# repeat until convergence
+
 lvnetSearch <- function(
   data,
   matrix = c("omega_theta","omega_psi","theta","psi"), # Matrix to optimize
   criterion = c("chisq", "BIC", "AIC"), # Chisquare will attempt to remove edge with no sig difference, and otherwise add edge with sig difference.
-  start = c("default","empty","full","lvglasso","glasso"),
+  start = c("default","empty","full"), # "glasso" & "lvglasso" currently disabled. glasso runs glasso on Psi or misfit, after running CFA
   alpha = 0.05,
   lambda,
   sampleSize,
   maxIter,
+  maxChange, # Set by default to degrees of freedom if start = "empty" and all possible edges if start = "full".
   ..., # Arguments sent to lvnet
-  lvglassoArgs = list(gamma = 0, nRho = 20), # Arguments sent to EBIClvglasso
-  glassoArgs = list(gamma = 0, nlambda = 100), # Arguments sent to EBICglasso
+  # lvglassoArgs = list(gamma = 0, nRho = 20), # Arguments sent to EBIClvglasso
+  glassoArgs = list(gamma = 0.5, nlambda = 100), # Arguments sent to EBICglasso
   verbose = TRUE,
   file, # If not missing, reads file to continue and stores results to file.
   startValues = list()
@@ -43,11 +54,11 @@ lvnetSearch <- function(
     
   } else {
     sampleSize <- nrow(data)   
-
+    
     data <- as.matrix(data)
     covmat <- cov(data, use = "pairwise.complete.obs")* (sampleSize - 1)/sampleSize
   }
-
+  
   if (missing(lambda)){
     message("Fitting network without latent variables")
     lambda <- matrix(,ncol(covmat),0)
@@ -62,40 +73,80 @@ lvnetSearch <- function(
   
   # Select start:
   if(start=="default"){
-    if (matrix=="omega_theta"){
-      if (Nlat > 0){
-        start <- "lvglasso"
-      } else {
-        start <- "glasso"
-      }
-    } else {
-      if (matrix %in% c("psi","omega_psi")){
-        start <- "full"
-      } else start <- "empty"
-    }
+    #     if (matrix=="omega_theta"){
+    #       start <- "empty"
+    # #       if (Nlat > 0){
+    # #         start <- "lvglasso"
+    # #       } else {
+    # #         start <- "glasso"
+    # #       }
+    #     } else {
+    if (matrix %in% c("psi","omega_psi")){
+      start <- "full"
+    } else start <- "empty"
+    # }
   }
   
-  if (start == "lvglasso"){
-    
-    if (verbose){
-      message("Estimating optimal lvglasso result")
-    }
-    
-    lvglassoRes <- do.call("EBIClvglasso", c(list(S=covmat, n = sampleSize, nLatents = Nlat), lvglassoArgs  ))
-    startValues$omega_theta <- lvglassoRes$omega_theta
-    curMat <- lvglassoRes$omega_theta!=0
-    
-  } else if (start == "glasso"){
-    
-    if (verbose){
-      message("Estimating optimal glasso result")
-    }
-    
-    glassoRes <- do.call(qgraph::EBICglasso, c(list(S=covmat, n = sampleSize), glassoArgs ))
-    startValues$omega_theta <- glassoRes
-    curMat <- glassoRes!=0
-    
-  } else if (matrix %in% c("omega_theta","theta")){
+  #   if (start == "lvglasso"){
+  #     stop("'lvglasso' start not supported")
+  #     if (verbose){
+  #       message("Estimating optimal lvglasso result")
+  #     }
+  #     
+  #     lvglassoRes <- do.call("EBIClvglasso", c(list(S=covmat, n = sampleSize, nLatents = Nlat), lvglassoArgs  ))
+  #     startValues$omega_theta <- lvglassoRes$omega_theta
+  #     curMat <- lvglassoRes$omega_theta!=0
+  #     
+  #   } else if (start == "glasso"){
+  #     browser()
+  #     
+  #     if (matrix %in% c("theta","psi")){
+  #       stop("'glasso' is not a valid start for optimizing theta or psi.")
+  #     }
+  #     
+  #     if (verbose){
+  #       message("Estimating starting matrix")
+  #     }
+  #     
+  #     # Start args:
+  #     lvnetArgs_start <- list(...)
+  #     lvnetArgs_start$data <- covmat
+  #     lvnetArgs_start$sampleSize <- sampleSize
+  #     lvnetArgs_start$lambda <- lambda
+  #     lvnetArgs_start$startValues <- startValues
+  #     
+  #     if (verbose){
+  #       message("Estimating initial lvnet model")
+  #     }
+  #     
+  # 
+  #     if (matrix == "omega_theta"){
+  #       lvnetArgs_start[[matrix]] <- curMat2modMat(matrix(0, Nvar, Nvar), matrix)
+  #       startMod <- do.call("lvnet", lvnetArgs_start)
+  #       
+  #       # Misfit:
+  #       misFit <- startMod$sampleStats$covMat - startMod$matrices$sigma + startMod$matrices$theta
+  #       
+  #       # make positive definite:
+  #       if (any(eigen(misFit)$values < 0)){
+  #         misFit <- misFit - diag(min(eigen(misFit)$values) - 0.0001, ncol(misFit))
+  #       }
+  #       
+  #       # Run glasso:
+  #       glassoRes <- do.call(qgraph::EBICglasso, c(list(S=misFit, n = sampleSize), glassoArgs ))
+  #       
+  #     }
+  #     
+  #     
+  # 
+  #     
+  #     glassoRes <- do.call(qgraph::EBICglasso, c(list(S=covmat, n = sampleSize), glassoArgs ))
+  #     startValues$omega_theta <- glassoRes
+  #     curMat <- glassoRes!=0
+  #     
+  #   } else 
+  
+  if (matrix %in% c("omega_theta","theta")){
     
     curMat <- matrix(start == "full", Nvar, Nvar)
     
@@ -119,9 +170,17 @@ lvnetSearch <- function(
   if (verbose){
     message("Estimating initial lvnet model")
   }
-
+  
   curMod <- do.call("lvnet", lvnetArgs)
   it <- 0
+  
+  if (missing(maxChange)){
+    if (start == "empty"){
+      maxChange <- curMod$fitMeasures$df  
+    } else {
+      maxChange <- Inf
+    }
+  }
   
   lvnetArgs$fitInd <- curMod$mxResults$independence
   lvnetArgs$fitSat <- curMod$mxResults$saturated
@@ -165,59 +224,112 @@ lvnetSearch <- function(
     
     # Create table:
     origFit <- anova(curMod)[-1,,drop=FALSE]
-
+    
     fits <- do.call(lvnetCompare,propModels)[-1,,drop=FALSE]
     
-
+    
     if (criterion %in% c("AIC","BIC")){
-      fits <- fits[rowSums(is.na(fits))==0,]
-      if (nrow(fits)==0) break
+      fits[[criterion]][is.na(fits[[criterion]])] <- Inf
       
       # Any is better?
       if (!any(fits[[criterion]] < origFit[[criterion]])){
         break
       } else {
         
-        # Which best?
-        best <- which.min(fits[[criterion]])
+#         # Which best?
+#         best <- which.min(fits[[criterion]])
+        # Select set of best edges:
 
-        
+        nImprove <- sum(fits[[criterion]] < origFit[[criterion]])
+        best <- order(fits[[criterion]],decreasing=FALSE)[1:min(nImprove,maxChange)]
       }
     } else {
-
-      # Significance testing!
+      # Test if parameter is currently an edge or not:
       curEdge <- curMat[upper.tri(curMat,diag=FALSE)]
-
+      
+      # Obtain the Chi-square of current model:
       curChisq <- curMod$fitMeasures$chisq
       curDF <- curMod$fitMeasures$df
       
+      # Obtain the chi-squares of proposed models:
       propChisq <- fits$Chisq
       propDF <- fits$Df
-      # First try to add an edge that improves fit significantly and the best:
+      
+      # Compute the p-values of chi-square difference tests:
       Pvals <- pchisq(abs(curChisq-propChisq), abs(curDF - propDF), lower.tail=FALSE)
-   
+      
+      # If not currently edge, adding an edge should significantly improve fit (p < 0.05).
+      # If currently an edge, removing that edge should *not* significantly worsen fit (p > 0.05)
+      # Prioritize removing edges
+      
       PvalsNAmax <- ifelse(is.na(Pvals),1,Pvals)
       PvalsNAmin <- ifelse(is.na(Pvals),0,Pvals)
-      if (any(PvalsNAmax < alpha & !curEdge)){
-        best <- which(PvalsNAmax == min(PvalsNAmax[!curEdge]))[1]
-      } else if (any(PvalsNAmin > alpha & curEdge)){
-        best <- which(PvalsNAmin == max(PvalsNAmin[curEdge]))[1]
-      } else {
+      
+      # Edges that can be removed:
+      improveRemoved <- which(curEdge & PvalsNAmin > alpha)
+      
+      # Relative rank how well they can be removed:
+      scoreRemoved <- rank(-PvalsNAmin[improveRemoved],ties.method = "random")
+      
+      # edges that can be added:
+      improveAdded <- which(!curEdge & PvalsNAmax < alpha)
+      
+      
+      # Relative rank how well they can be added:
+      scoreAdded <- rank(PvalsNAmax[improveAdded],ties.method = "random") + maxNull(scoreRemoved)
+      
+      # Combine:
+      improve <- c(improveRemoved,improveAdded)
+      score <- c(scoreRemoved,scoreAdded)
+      
+      # Number that can be improved:
+      nImprove <- length(improve)
+      
+      if (nImprove==0){
         break
       }
+      best <- improve[order(score,decreasing=FALSE)][1:min(nImprove,maxChange)]
+    }
+    
+    # Number of edges to change:
+    nChange <- length(best)
+    
+    if (verbose){
+      if (nChange > 1)  {
+        message(paste("Changing",nChange,"edges"))
+      } else {
+        message(paste("Changing",nChange,"edge"))
+      }
+    }
+    
+    # Update the current matrix:
+    for (b in best){
+      curMat[upTriElements[b,1],upTriElements[b,2]] <- curMat[upTriElements[b,2],upTriElements[b,1]] <- 
+        !curMat[upTriElements[b,1],upTriElements[b,2]]
+      
+
+    } 
+    
+    # Set new model:
+    if (nChange > 1){
+      lvnetArgs[[matrix]] <- curMat2modMat(curMat, matrix)
+      curMod <- do.call("lvnet", lvnetArgs)
+    } else {
+      # Compute new current model:
+      curMod <- propModels[[best]]
     }
 
-    curMat[upTriElements[best,1],upTriElements[best,2]] <- curMat[upTriElements[best,2],upTriElements[best,1]] <- 
-      !curMat[upTriElements[best,1],upTriElements[best,2]]
-    curMod <- propModels[[best]]
+    
+    # Set the maxChange counter:
+    maxChange <- max(length(best)-1,1)
     
   }
   
-    Results <- list(
-      best = curMod,
-      # modList = modList,
-      niter = it)
-    
-    class(Results) <- c("lvnetSearch","list")
-    return(Results)
+  Results <- list(
+    best = curMod,
+    # modList = modList,
+    niter = it)
+  
+  class(Results) <- c("lvnetSearch","list")
+  return(Results)
 }
