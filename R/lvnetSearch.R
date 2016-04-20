@@ -309,10 +309,11 @@ lvnetSearch <- function(
       
 
     } 
-    
+
     # Set new model:
     if (nChange > 1){
       lvnetArgs[[matrix]] <- curMat2modMat(curMat, matrix)
+      lvnetArgs$startValues[[matrix]] <- curEst * curMat
       curMod <- do.call("lvnet", lvnetArgs)
     } else {
       # Compute new current model:
