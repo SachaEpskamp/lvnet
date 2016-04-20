@@ -33,8 +33,9 @@ lvnet <- function(
     name = "model",
     startValues=startValues)
 
-  fitMod <- OpenMx::mxRun(mod, silent = TRUE,
-                  suppressWarnings = TRUE)
+
+  capture.output(fitMod <- OpenMx::mxRun(mod, silent = TRUE,
+                  suppressWarnings = TRUE),type="message")
 
 
   if (missing(fitSat)){
@@ -49,8 +50,8 @@ lvnet <- function(
     )
     
     
-    fitSat <- mxRun(satMod, silent = TRUE,
-                    suppressWarnings = TRUE)  
+    capture.output(fitSat <- mxRun(satMod, silent = TRUE,
+                    suppressWarnings = TRUE)  ,type="message")
   }
   
   if (missing(fitInd)){
@@ -64,8 +65,8 @@ lvnet <- function(
       sampleSize = sampleSize
     )
     
-    fitInd <- mxRun(indMod, silent = TRUE,
-                    suppressWarnings = TRUE)
+    capture.output(fitInd <- mxRun(indMod, silent = TRUE,
+                    suppressWarnings = TRUE),type="message")
   }
 
   if (missing(sampleSize)){
