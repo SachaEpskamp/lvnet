@@ -1,4 +1,33 @@
 # Main function for confirmatory lvnet
+setSym <- function(x) {
+  if (is.matrix(x)){
+    return((x + t(x)) / 2)
+  } else return(x)
+}
+
+countPars <- function(x,tol=sqrt(.Machine$double.eps)){
+  Matrices <- x@matrices
+  
+  # Pars per matrix:
+  counts <- sapply(Matrices,function(mat){
+    symm <- "SymmMatrix" %in% class(mat) 
+    # Index (either full or UT incl diag):
+    if (symm){
+      ix <- upper.tri(mat@values,diag=TRUE)
+    } else {
+      ix <- matrix(TRUE,nrow(mat@values),ncol(mat@values))
+    }
+    free <- mat@free
+    
+    sum(abs(mat@values[free & ix]) > tol) 
+  })
+  
+  nPar <- sum(counts)
+  nVar <- ncol(x@data@observed)
+  nObs <- nVar * (nVar+1) / 2
+  
+  return(list(nPar=nPar,DF=nObs - nPar))
+}
 
 lvnet <- function(
   data, # Raw data or a covariance matrix
@@ -13,10 +42,133 @@ lvnet <- function(
   sampleSize,
   fitInd,
   fitSat,
-  startValues=list() # Named list of starting values
-  ){
+  startValues=list(), # Named list of starting values. CAN ALSO BE lvnet OBJECT!
+  scale = TRUE, # Standardize cov to cor before estimation
+  nLatents, # allows for quick specification of fully populated lambda matrix.
+  
+  # Experimental!!!
+  lasso = 0, # IF NOT 0, use lasso penalty
+  lassoMatrix, # Vector of character-string of matrices to apply LASSO penalty on
+  # optimizer = c("default","SLSQP","NPSOL","CSOLNP")
+  lassoTol = 1e-4
+  
+  # Optimizer:
+  # nCores = 1
+){
   
   Nvar <- ncol(data)
+  
+  # Check args:
+  if (!missing(lambda) & !missing(nLatents)){
+    warning("'nLatents' ignored if 'lambda' is also assigned.")
+  }
+  
+#   if (nCores > 1){
+#     mxOption(NULL, "Number of Threads", nCores - 1)
+#   } else {
+#     mxOption(NULL, "Number of Threads", NULL)
+#   }
+  
+  #   optimizer <- match.arg(optimizer)
+  #   if (optimizer=="default"){
+  #     if (lasso != 0)
+  #       optimizer <- "NPSOL"
+  #   } else {
+  #     optimizer <- "SLSQP"
+  #   }
+  #   
+  #   # Set optimizer:
+  #   mxOption(NULL,"Default optimizer",optimizer)
+  
+  # Check for lasso:
+  if (lasso != 0){
+    if (missing(lassoMatrix)){
+      stop ("'lassoMatrix' must not be missing if lasso != 0")
+    }
+    if (any(!lassoMatrix %in% c("lambda","psi","omega_psi","theta","omega_theta","beta"))){
+      stop("LASSO only supported for 'lambda', 'beta', 'psi', 'omega_psi', 'theta' and 'omega_theta'")
+    }
+  }
+  
+  # if LASSO is used, run model first without the LASSO matrix to obtain starting values
+  if (is(startValues,"lvnet") || lasso != 0){
+    if (is(startValues,"lvnet")){
+      initRes <- startValues
+      startValues <- list()
+    } else {
+      initRes <- lvnet(
+        data=data, # Raw data or a covariance matrix
+        lambda=lambda, # Lambda design matrix. NA indicates free parameters. If missing and psi is missing, defaults to identity matrix with warning
+        beta=beta, # Structural matrix. If missing, defaults to zero.
+        omega_theta=omega_theta, # Observed residual network. If missing, defaults to matrix of zeroes
+        delta_theta=delta_theta, # Scaling matrix, can be missing
+        omega_psi=omega_psi, # Latent residual network. If missing, defaults to matrix of zeroes
+        delta_psi=delta_psi, # Scaling matrix, can be missing
+        psi=psi, # Latent variance-covariance matrix. If missing, defaults to free
+        theta=theta, # Used if model = "sem". Defaults to diagonal
+        sampleSize=sampleSize,
+        fitInd=fitInd,
+        fitSat=fitSat,
+        startValues=startValues,
+        nLatents=nLatents
+      )
+    }
+
+    if (is.null(startValues[['lambda']])){
+      startValues[['lambda']] <- initRes$matrices$lambda
+      if (!missing(lambda)){
+        startValues[['lambda']] <- startValues[['lambda']] * is.na(lambda)
+      }
+    }
+    if (is.null(startValues[['beta']])){
+      startValues[['beta']] <- initRes$matrices$beta
+      if (!missing(beta)){
+        startValues[['beta']] <- startValues[['beta']] * is.na(beta)
+      }
+    }
+    if (is.null(startValues[['omega_theta']])){
+      startValues[['omega_theta']] <- setSym(initRes$matrices$omega_theta)
+      if (!missing(omega_theta)){
+        startValues[['omega_theta']] <- startValues[['omega_theta']] * is.na(omega_theta)
+      }
+    }
+    if (is.null(startValues[['delta_theta']])){
+      startValues[['delta_theta']] <- setSym(initRes$matrices$delta_theta)
+      if (!missing(delta_theta)){
+        startValues[['delta_theta']] <- startValues[['delta_theta']] * is.na(delta_theta)
+      }
+    }
+    if (is.null(startValues[['omega_psi']])){
+      startValues[['omega_psi']] <- setSym(initRes$matrices$omega_psi)
+      if (!missing(omega_psi)){
+        startValues[['omega_psi']] <- startValues[['omega_psi']] * is.na(omega_psi)
+      }
+    }
+    if (is.null(startValues[['delta_psi']])){
+      startValues[['delta_psi']] <- setSym(initRes$matrices$delta_psi)
+      if (!missing(delta_psi)){
+        startValues[['delta_psi']] <- startValues[['delta_psi']] * is.na(delta_psi)
+      }
+    }
+    if (is.null(startValues[['psi']])){
+      startValues[['psi']] <- setSym(initRes$matrices$psi)
+      if (!missing(psi)){
+        startValues[['psi']] <- startValues[['psi']] * is.na(psi)
+      }
+    }
+    if (is.null(startValues[['theta']])){
+      startValues[['theta']] <- setSym(initRes$matrices$theta)
+      if (!missing(theta)){
+        startValues[['theta']] <- startValues[['theta']] * is.na(theta)
+      }
+    }
+    if (missing(fitInd)){
+      fitInd <- initRes$mxResults$independence
+    }
+    if (missing(fitSat)){
+      fitInd <- initRes$mxResults$saturated
+    }
+  }
   
   ### Generate model:
   mod <- generatelvnetmodel(
@@ -31,13 +183,18 @@ lvnet <- function(
     theta = theta,
     sampleSize = sampleSize,
     name = "model",
-    startValues=startValues)
-
-
-  capture.output(fitMod <- OpenMx::mxRun(mod, silent = TRUE,
-                  suppressWarnings = TRUE),type="message")
-
-
+    startValues=startValues,
+    lasso = lasso,
+    lassoMatrix=lassoMatrix,
+    scale=scale,
+    nLatents=nLatents)
+  
+  
+  #   capture.output(fitMod <- OpenMx::mxRun(mod, silent = TRUE,
+  #                   suppressWarnings = TRUE),type="message")
+  fitMod <- OpenMx::mxRun(mod, silent = TRUE, suppressWarnings = TRUE)
+  
+  
   if (missing(fitSat)){
     # Saturated model:
     satMod <- generatelvnetmodel(
@@ -51,7 +208,7 @@ lvnet <- function(
     
     
     capture.output(fitSat <- mxRun(satMod, silent = TRUE,
-                    suppressWarnings = TRUE)  ,type="message")
+                                   suppressWarnings = TRUE)  ,type="message")
   }
   
   if (missing(fitInd)){
@@ -66,16 +223,16 @@ lvnet <- function(
     )
     
     capture.output(fitInd <- mxRun(indMod, silent = TRUE,
-                    suppressWarnings = TRUE),type="message")
+                                   suppressWarnings = TRUE),type="message")
   }
-
+  
   if (missing(sampleSize)){
     sampleSize <- nrow(data)
   }
   
   # Estract estimated matrices:
   Matrices <- c(lapply(fitMod$matrices,'slot','values'),
-  lapply(fitMod$algebras,'slot','result'))
+                lapply(fitMod$algebras,'slot','result'))
   
   ### COMPUTE RESULTS ###
   Results <- list(
@@ -91,20 +248,36 @@ lvnet <- function(
     fitMeasures = list()
   )
   
-  sigma <- Results$matrices$sigma
+  sigma <- Results$matrices$sigma_positive
   S <- Results$sampleStats$covMat
   
+  #   fitMod@matrices$omega_theta@values
+  #   fitMod@algebras$penalty
+  #   sum(abs(fitMod@matrices$omega_theta@values[upper.tri(fitMod@matrices$omega_theta@values,FALSE)]))
+  #   
   # Compute chi-square:
-  Results$fitMeasures$npar <- summary(fitMod)$estimatedParameters
-  Results$fitMeasures$fmin <- (sum(diag(S %*% solve(sigma)))- log(det(S %*% solve(sigma))) - Nvar)/2
+  # if (lasso != 0){
+    # Compute DF from non-zero elements
+    # Count number of non-zero parameters:
+    # Start with means:
+
+  Pars <- countPars(fitMod, ifelse(lasso==0,sqrt(.Machine$double.eps),lassoTol))
+    
+    Results$fitMeasures$npar <- Pars$nPar
+    Results$fitMeasures$df <-  Pars$DF
+#   } else {
+#     Results$fitMeasures$npar <- summary(fitMod)$estimatedParameters
+#     Results$fitMeasures$df <- summary(fitMod)$degreesOfFreedom  
+#   }
+
+  Results$fitMeasures$fmin <- (sum(diag(S %*% corpcor::pseudoinverse(sigma)))- log(det(S %*% corpcor::pseudoinverse(sigma))) - Nvar)/2
   Results$fitMeasures$chisq <- 2 * (sampleSize - 1) * Results$fitMeasures$fmin
-  Results$fitMeasures$df <- summary(fitMod)$degreesOfFreedom
   Results$fitMeasures$pvalue <- pchisq(Results$fitMeasures$chisq, Results$fitMeasures$df, lower.tail = FALSE)
   
   # Baseline model:
   sigmaBase <- fitInd$algebras$sigma$result
-  Results$fitMeasures$baseline.chisq <- (sampleSize - 1) * (sum(diag(S %*% solve(sigmaBase)))- log(det(S %*% solve(sigmaBase))) - Nvar)
-  Results$fitMeasures$baseline.df <- summary(fitInd)$degreesOfFreedom
+  Results$fitMeasures$baseline.chisq <- (sampleSize - 1) * (sum(diag(S %*% corpcor::pseudoinverse(sigmaBase)))- log(det(S %*% corpcor::pseudoinverse(sigmaBase))) - Nvar)
+  Results$fitMeasures$baseline.df <- countPars(fitInd)$DF
   Results$fitMeasures$baseline.pvalue <- pchisq(Results$fitMeasures$baseline.chisq, Results$fitMeasures$baseline.df, lower.tail = FALSE)
   
   # Incremental Fit Indices
@@ -151,7 +324,7 @@ lvnet <- function(
   } else if(dfm < 1 || upper.lambda(N.RMSEA) > 0 || upper.lambda(0) < 0) {
     Results$fitMeasures$rmsea.ci.upper <- 0
   } else {
- 
+    
     if (upper.lambda(0) * upper.lambda(N.RMSEA) > 0){
       lambda.u <- NA
     } else {
@@ -159,7 +332,7 @@ lvnet <- function(
       lambda.u <- try(uniroot(f=upper.lambda, lower=0,upper=N.RMSEA)$root,
                       silent=TRUE)  
     }
-
+    
     if(inherits(lambda.u, "try-error")) {lambda.u <- NA }
     
     Results$fitMeasures$rmsea.ci.upper <- sqrt( lambda.u/(sampleSize*dfm) )

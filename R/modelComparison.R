@@ -1,9 +1,23 @@
 lvnetCompare <- function(...){
  
   dots <- list(...)
-  
+
   # Combine lvnet objects:
+  # LASSO objectS:
+  lvnetLasObj <- dots[sapply(dots,is,"lvnetLasso")]
   lvnetObjects <- dots[sapply(dots,is,"lvnet")]
+  
+  if (length(lvnetLasObj) > 0){
+    for (i in seq_along(lvnetLasObj)){
+      lvnetObjects <- c(lvnetObjects,lvnetLasObj[[i]]$modList)
+    }
+
+  }
+
+  if (length(lvnetObjects) == 0){
+    stop("No 'lvnet' models in input.")
+  }
+  
   if (is.null(names(lvnetObjects))){
     names(lvnetObjects) <- paste("Model",seq_along(lvnetObjects))
   }

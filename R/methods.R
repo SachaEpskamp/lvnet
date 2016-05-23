@@ -1,4 +1,4 @@
-summary.lvnet <- function(object, include = c('input','chisq','infcrit','fitindices','rmsea','parests'), ...){
+summary.lvnet <- function(object, include = c('input','chisq','infcrit','fitindices','rmsea','parests'), digits = 3,...){
   
   cat("========== lvnet ANALYSIS RESULTS ========== ")
   
@@ -16,32 +16,32 @@ summary.lvnet <- function(object, include = c('input','chisq','infcrit','fitindi
   if ('chisq' %in% include){
     cat(
       "\n\nTest for exact fit:",
-      "\n\tChi-square:\t\t",object$fitMeasures$chisq,
-      "\n\tDF:\t\t\t",object$fitMeasures$df,
-      "\n\tp-value:\t\t",object$fitMeasures$pvalue
+      "\n\tChi-square:\t\t",round(object$fitMeasures$chisq,digits),
+      "\n\tDF:\t\t\t",round(object$fitMeasures$df,digits),
+      "\n\tp-value:\t\t",round(object$fitMeasures$pvalue,digits)
     )
   }
 
   if ('infcrit' %in% include){
     cat(
       "\n\nInformation criteria:",
-      "\n\tAIC:\t\t\t",object$fitMeasures$aic,
-      "\n\tBIC:\t\t\t",object$fitMeasures$bic,
-      "\n\tAdjusted BIC:\t\t",object$fitMeasures$bic2
+      "\n\tAIC:\t\t\t",round(object$fitMeasures$aic,digits),
+      "\n\tBIC:\t\t\t",round(object$fitMeasures$bic,digits),
+      "\n\tAdjusted BIC:\t\t",round(object$fitMeasures$bic2,digits)
     )
   }
   
   if ('fitindices' %in% include){
     cat(
       "\n\nFit indices:",
-      "\n\tCFI:\t\t\t",object$fitMeasures$cfi,
-      "\n\tNFI:\t\t\t",object$fitMeasures$nfi,
-      "\n\tTLI:\t\t\t",object$fitMeasures$tli,
-      "\n\tRFI:\t\t\t",object$fitMeasures$rfi,
-      "\n\tIFI:\t\t\t",object$fitMeasures$ifi,
-      "\n\tRNI:\t\t\t",object$fitMeasures$rni,
-      "\n\tRMR:\t\t\t",object$fitMeasures$rmr,
-      "\n\tSRMR:\t\t\t",object$fitMeasures$srmr
+      "\n\tCFI:\t\t\t",round(object$fitMeasures$cfi,digits),
+      "\n\tNFI:\t\t\t",round(object$fitMeasures$nfi,digits),
+      "\n\tTLI:\t\t\t",round(object$fitMeasures$tli,digits),
+      "\n\tRFI:\t\t\t",round(object$fitMeasures$rfi,digits),
+      "\n\tIFI:\t\t\t",round(object$fitMeasures$ifi,digits),
+      "\n\tRNI:\t\t\t",round(object$fitMeasures$rni,digits),
+      "\n\tRMR:\t\t\t",round(object$fitMeasures$rmr,digits),
+      "\n\tSRMR:\t\t\t",round(object$fitMeasures$srmr,digits)
     )
     
   }
@@ -49,10 +49,10 @@ summary.lvnet <- function(object, include = c('input','chisq','infcrit','fitindi
   if ('rmsea' %in% include){
     cat(
       "\n\nRMSEA:",
-      "\n\tRMSEA:\t\t\t",object$fitMeasures$rmsea,
-      "\n\t90% CI lower bound:\t",object$fitMeasures$rmsea.ci.lower,
-      "\n\t90% CI upper bound:\t",object$fitMeasures$rmsea.ci.upper,
-      "\n\tp-value:\t\t",object$fitMeasures$rmsea.pvalue
+      "\n\tRMSEA:\t\t\t",round(object$fitMeasures$rmsea,digits),
+      "\n\t90% CI lower bound:\t",round(object$fitMeasures$rmsea.ci.lower,digits),
+      "\n\t90% CI upper bound:\t",round(object$fitMeasures$rmsea.ci.upper,digits),
+      "\n\tp-value:\t\t",round(object$fitMeasures$rmsea.pvalue,digits)
     )
   }
 
@@ -60,7 +60,9 @@ summary.lvnet <- function(object, include = c('input','chisq','infcrit','fitindi
     cat("\n\nParameter estimates:\n")
     sum <- summary(object$mxResults$model)
     parMat <- sum$parameters
-    print(parMat[,c('matrix','row','col','Estimate','Std.Error')])
+    parMat[['Estimate']] <- round(parMat[['Estimate']],digits)
+    parMat[['Std.Error']] <- round(parMat[['Std.Error']],digits)
+    print(parMat[,c('matrix','row','col','Estimate','Std.Error')], row.names=FALSE)
   }
   
 }

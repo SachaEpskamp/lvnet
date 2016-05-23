@@ -27,12 +27,13 @@ lvnetSearch <- function(
   data,
   matrix = c("omega_theta","omega_psi","theta","psi"), # Matrix to optimize
   criterion = c("chisq", "BIC", "AIC"), # Chisquare will attempt to remove edge with no sig difference, and otherwise add edge with sig difference.
-  start = c("default","empty","full"), # "glasso" & "lvglasso" currently disabled. glasso runs glasso on Psi or misfit, after running CFA
+  start = c("default","empty","full"), # CAN ALSO BE MATRIX "glasso" & "lvglasso" currently disabled. glasso runs glasso on Psi or misfit, after running CFA
   alpha = 0.05,
   lambda,
   sampleSize,
   maxIter,
-  maxChange, # Set by default to degrees of freedom if start = "empty" and all possible edges if start = "full".
+  nCores = 1, # Set to > 1 to use parallel computing
+  maxChange, # Set by default to 1 if start = "empty" and all possible edges if start = "full".
   ..., # Arguments sent to lvnet
   # lvglassoArgs = list(gamma = 0, nRho = 20), # Arguments sent to EBIClvglasso
   glassoArgs = list(gamma = 0.5, nlambda = 100), # Arguments sent to EBICglasso
@@ -40,9 +41,13 @@ lvnetSearch <- function(
   file, # If not missing, reads file to continue and stores results to file.
   startValues = list()
 ){
+  if (!is.matrix(start)){
+    start <- start[1]
+    stopifnot(start %in% c("default","empty","full"))
+  }
   matrix <- match.arg(matrix)
   criterion <- toupper(match.arg(criterion))
-  start <- match.arg(start)
+  # start <- match.arg(start)
   
   if (ncol(data) == nrow(data) && isSymmetric(unname(data))){
     if (missing(sampleSize)){
@@ -64,28 +69,42 @@ lvnetSearch <- function(
     lambda <- matrix(,ncol(covmat),0)
   }
   
-  if (start == "lvglasso" & matrix != "omega_theta"){
-    stop("start = 'lvglasso' only supports matrix = 'omega_theta'")
+  if (is.matrix(start)){
+    curMat <- start 
+  } else {
+    if (start == "lvglasso" & matrix != "omega_theta"){
+      stop("start = 'lvglasso' only supports matrix = 'omega_theta'")
+    }
+    
+    Nvar <- nrow(lambda)
+    Nlat <- ncol(lambda)
+    
+    # Select start:
+    if(start=="default"){
+      #     if (matrix=="omega_theta"){
+      #       start <- "empty"
+      # #       if (Nlat > 0){
+      # #         start <- "lvglasso"
+      # #       } else {
+      # #         start <- "glasso"
+      # #       }
+      #     } else {
+      if (matrix %in% c("psi","omega_psi")){
+        start <- "full"
+      } else start <- "empty"
+      # }
+    }
+    
+    if (matrix %in% c("omega_theta","theta")){
+      
+      curMat <- matrix(start == "full", Nvar, Nvar)
+      
+    } else {
+      
+      curMat <- matrix(start == "full", Nlat, Nlat)
+    }
   }
-  
-  Nvar <- nrow(lambda)
-  Nlat <- ncol(lambda)
-  
-  # Select start:
-  if(start=="default"){
-    #     if (matrix=="omega_theta"){
-    #       start <- "empty"
-    # #       if (Nlat > 0){
-    # #         start <- "lvglasso"
-    # #       } else {
-    # #         start <- "glasso"
-    # #       }
-    #     } else {
-    if (matrix %in% c("psi","omega_psi")){
-      start <- "full"
-    } else start <- "empty"
-    # }
-  }
+
   
   #   if (start == "lvglasso"){
   #     stop("'lvglasso' start not supported")
@@ -146,14 +165,7 @@ lvnetSearch <- function(
   #     
   #   } else 
   
-  if (matrix %in% c("omega_theta","theta")){
-    
-    curMat <- matrix(start == "full", Nvar, Nvar)
-    
-  } else {
-    
-    curMat <- matrix(start == "full", Nlat, Nlat)
-  }
+
   
   if (missing(maxIter)) maxIter <- ncol(curMat) * (ncol(curMat)-1) / 2
   # Empty model list:
@@ -173,12 +185,12 @@ lvnetSearch <- function(
   
   curMod <- do.call("lvnet", lvnetArgs)
   it <- 0
-  
+
   if (missing(maxChange)){
-    if (start == "empty"){
-      maxChange <- curMod$fitMeasures$df  
-    } else {
+    if (all(curMat)){
       maxChange <- Inf
+    } else {
+      maxChange <- 1
     }
   }
   
@@ -201,26 +213,57 @@ lvnetSearch <- function(
     
     propModels <- vector("list", nrow(upTriElements))
     
-    if (verbose){
-      message(paste("Iteration:",it))
-      pb <- txtProgressBar(0, nrow(upTriElements), style = 3)
+    ### Now using lapply:
+    if (nCores == 1){
+      if (verbose){
+        # message(paste("Iteration:",it))
+        pb <- txtProgressBar(0, nrow(upTriElements), style = 3)
+      }
+      
+      for (i in seq_len(nrow(upTriElements))){
+        propMat <- curMat
+        propMat[upTriElements[i,1],upTriElements[i,2]] <- propMat[upTriElements[i,2],upTriElements[i,1]] <- 
+          !curMat[upTriElements[i,1],upTriElements[i,2]]
+        
+        lvnetArgs[[matrix]] <- curMat2modMat(propMat, matrix)
+        lvnetArgs$startValues[[matrix]] <- curEst * propMat
+        propModels[[i]] <- do.call("lvnet", lvnetArgs)
+        
+        
+        if (verbose){
+          setTxtProgressBar(pb, i)
+        }      
+      }
+      if (verbose) close(pb)
+    } else {
+      if (verbose){
+        message(paste("Iteration:",it))
+      }
+      # Number of clusters:
+      nClust <- nCores - 1
+      
+      # Make cluster:
+      cl <- makePSOCKcluster(nClust)  
+      
+      # Export stuff:
+      clusterExport(cl, c("curMat","upTriElements","lvnetArgs","curMat2modMat",
+                          "matrix","lvnet","curEst","lvnetArgs"), envir = environment())
+      
+      propModels <- parLapply(cl, seq_len(nrow(upTriElements)), function(i){
+        propMat <- curMat
+        propMat[upTriElements[i,1],upTriElements[i,2]] <- propMat[upTriElements[i,2],upTriElements[i,1]] <- 
+          !curMat[upTriElements[i,1],upTriElements[i,2]]
+        
+        lvnetArgs[[matrix]] <- curMat2modMat(propMat, matrix)
+        lvnetArgs$startValues[[matrix]] <- curEst * propMat
+        do.call("lvnet", lvnetArgs)
+      })
+      
+      # Stop cluster:
+      stopCluster(cl)
     }
     
-    for (i in seq_len(nrow(upTriElements))){
-      propMat <- curMat
-      propMat[upTriElements[i,1],upTriElements[i,2]] <- propMat[upTriElements[i,2],upTriElements[i,1]] <- 
-        !curMat[upTriElements[i,1],upTriElements[i,2]]
-      
-      lvnetArgs[[matrix]] <- curMat2modMat(propMat, matrix)
-      lvnetArgs$startValues[[matrix]] <- curEst * propMat
-      propModels[[i]] <- do.call("lvnet", lvnetArgs)
-      
-      
-      if (verbose){
-        setTxtProgressBar(pb, i)
-      }      
-    }
-    if (verbose) close(pb)
+
     
     # Create table:
     origFit <- anova(curMod)[-1,,drop=FALSE]

@@ -5,8 +5,7 @@ start <- function(mat,list,alt){
     return(alt)
   }
 }
-  
-  
+
 # Model matrices should contain NA for free elements and a value for fixed elements.
 generatelvnetmodel <- function(
   data, # Raw data or a covariance matrix
@@ -20,7 +19,12 @@ generatelvnetmodel <- function(
   theta, # Used if model = "sem". Defaults to diagonal
   sampleSize,
   name = "mod",
-  startValues = list()){
+  startValues = list(),
+  lasso = 0,
+  lassoMatrix = "",
+  scale = TRUE,
+  nLatents # allows for quick specification of fully populated lambda matrix.
+  ){
   
   # Stupid things to fool R check:
   I_lat <- NULL
@@ -40,25 +44,56 @@ generatelvnetmodel <- function(
   # Check matrices:
   # Lambda (Default to iden if psi is missing or full if psi is not)
   if (missing(lambda)){
-    if (!missing(psi)){
+    if (!missing(nLatents)){
+      lambda <- matrix(NA,Nvar,nLatents)
+    } else if (!missing(psi)){
       lambda <- matrix(NA, Nvar, ncol(psi))
     } else if (!missing(omega_psi)){
       lambda <- matrix(NA, Nvar, ncol(omega_psi))
     } else {
       lambda <- matrix(,Nvar,0)
+      
+      if (missing(theta) && missing(omega_theta)){
+        if (lasso !=0){
+          if (!(any(c("omega_theta","theta") %in% lassoMatrix))){
+            theta <- matrix(NA, Nvar, Nvar)
+          }
+        } else {
+          theta <- matrix(NA, Nvar, Nvar)
+        }
+      }
     }
   }
   
   Nlat <- ncol(lambda)
   
+  # Check lasso matrix and set missing if needed:
+  if (!missing(lassoMatrix)){
+    if ("omega_psi" %in% lassoMatrix && missing(omega_psi)){
+      omega_psi <- matrix(NA,Nlat,Nlat)
+      diag(omega_psi) <- 0
+    }
+    if ("psi" %in% lassoMatrix && missing(psi)){
+      psi <- matrix(NA,Nlat,Nlat)
+      diag(psi) <- 1
+    }
+    if ("omega_theta" %in% lassoMatrix && missing(omega_theta)){
+      omega_theta <- matrix(NA,Nvar,Nvar)
+      diag(omega_theta) <- 0
+    }
+    if ("theta" %in% lassoMatrix && missing(theta)){
+      theta <- matrix(NA,Nvar,Nvar)
+    }
+  }
+
   # psi and omega_psi may not both be missing:
   if(!missing(psi) & !missing(omega_psi)){
     stop("Both 'psi' and 'omega_psi' modeled.")
   }
-  
+
   # Both theta and omega_theta may not be missing:
   if(!missing(theta) & !missing(omega_theta)){
-    stop("Both 'psi' and 'omega_psi' modeled.")
+    stop("Both 'theta' and 'omega_theta' modeled.")
   }
   
   # Identify if estimation should be on psi or omega_psi:
@@ -159,6 +194,15 @@ generatelvnetmodel <- function(
     data <- as.matrix(data)
     covMat <- cov(data, use = "pairwise.complete.obs")* (sampleSize - 1)/sampleSize
   }
+  
+  if (scale){
+    covMat <- setSym(cov2cor(covMat))
+  } else {
+    if (lasso != 0){
+      warning("It is advised to set 'scale = TRUE' when using LASSO estimation.")
+    }
+  }
+  
   # 
   Mx_data <- OpenMx::mxData(observed = covMat, type = "cov", numObs = sampleSize)
   # means:
@@ -222,12 +266,7 @@ generatelvnetmodel <- function(
     name = "I_obs"
   )
   
-  # Expectation:
-  expFunction <- OpenMx::mxExpectationNormal(covariance = "sigma")
   
-  
-  # Fit function:
-  fitFunction <- OpenMx::mxFitFunctionML()
   
   # Psi and omega_psi:
   if (estPsi){
@@ -279,7 +318,7 @@ generatelvnetmodel <- function(
     }
 
     Mx_delta_psi <- OpenMx::mxAlgebra(
-      vec2diag(sqrt(diag2vec(solve(psi)))),
+      vec2diag(1/sqrt(diag2vec(solve(psi)))),
       name = "delta_psi"
     )
     
@@ -308,8 +347,8 @@ generatelvnetmodel <- function(
         ncol = ncol(omega_psi),
         free = is.na(omega_psi),
         values = start("omega_psi",startValues,0),
-        lbound = ifelse(diag(nrow(omega_psi)) == 1,0, -1),
-        ubound = ifelse(diag(nrow(omega_psi)) == 1,0, 1),
+        lbound = ifelse(diag(nrow(omega_psi)) == 1,0, -0.99),
+        ubound = ifelse(diag(nrow(omega_psi)) == 1,0, 0.99),
         name = "omega_psi",
       )      
     }
@@ -334,7 +373,7 @@ generatelvnetmodel <- function(
     )
     
     Mx_delta_theta <- OpenMx::mxAlgebra(
-      vec2diag(sqrt(diag2vec(solve(theta)))),
+      vec2diag(1/sqrt(diag2vec(solve(theta)))),
       name = "delta_theta"
     )
     
@@ -343,36 +382,83 @@ generatelvnetmodel <- function(
       name = "omega_theta"
     )
     
-  } else {
     
-    # Delta:
-    Mx_delta_theta <- OpenMx::mxMatrix(
-      type = "Diag",
-      nrow = nrow(delta_theta),
-      ncol = ncol(delta_theta),
-      free = is.na(delta_theta),
-      values = start("delta_theta",startValues,ifelse(is.na(delta_theta),1,delta_theta)),
-      lbound = 0,
+    Mx_theta_inverse <- OpenMx::mxAlgebra(
+      solve(theta),
+      name = "theta_inverse"
+    )
+    
+  } else {
+
+    if (is.null(startValues[["delta_theta"]])){
+      startValues[["delta_theta"]] <- diag(1/sqrt(diag(corpcor::pseudoinverse(covMat))))
+    }
+    
+    
+    ##### TEST CODES ####
+    
+    # Only estimate inverse of theta, obtain omega_theta and delta_theta afterwards:
+    # Use
+
+    Mx_theta_inverse <- OpenMx::mxMatrix(
+      type = "Symm",
+      nrow = Nvar,
+      ncol = Nvar,
+      free = is.na(omega_theta) | is.na(delta_theta),
+      values = diag(1,Nvar),
+      lbound = ifelse(diag(Nvar) == 1,0, -Inf),
+      ubound = Inf,
+      name = "theta_inverse"
+    )
+    
+    Mx_delta_theta <- OpenMx::mxAlgebra(
+      vec2diag(1/sqrt(diag2vec(theta_inverse))),
       name = "delta_theta"
     )
     
-    # Omega:
-    Mx_omega_theta <- OpenMx::mxMatrix(
-      type = "Symm",
-      nrow = nrow(omega_theta),
-      ncol = ncol(omega_theta),
-      free = is.na(omega_theta),
-      values = start("omega_theta",startValues,0),
-      lbound = ifelse(diag(nrow(omega_theta)) == 1,0, -1),
-      ubound = ifelse(diag(nrow(omega_theta)) == 1,0, 1),
+    Mx_omega_theta <- OpenMx::mxAlgebra(
+      I_obs - delta_theta %*% theta_inverse %*% delta_theta,
       name = "omega_theta"
     )
     
     Mx_theta <- OpenMx::mxAlgebra(
-      delta_theta %*% solve(I_obs - omega_theta) %*% delta_theta,
+      solve(theta_inverse),
       name = "theta"
     )
+    
+    #
+    
+    
+#     
+#     # Delta:
+#     Mx_delta_theta <- OpenMx::mxMatrix(
+#       type = "Diag",
+#       nrow = nrow(delta_theta),
+#       ncol = ncol(delta_theta),
+#       free = is.na(delta_theta),
+#       values = start("delta_theta",startValues,ifelse(is.na(delta_theta),1,delta_theta)),
+#       lbound = 0,
+#       name = "delta_theta"
+#     )
+# 
+#     # Omega:
+#     Mx_omega_theta <- OpenMx::mxMatrix(
+#       type = "Symm",
+#       nrow = nrow(omega_theta),
+#       ncol = ncol(omega_theta),
+#       free = is.na(omega_theta),
+#       values = start("omega_theta",startValues,0),
+#       lbound = ifelse(diag(nrow(omega_theta)) == 1,0, -0.99),
+#       ubound = ifelse(diag(nrow(omega_theta)) == 1,0, 0.99),
+#       name = "omega_theta"
+#     )
+#     
+#     Mx_theta <- OpenMx::mxAlgebra(
+#       delta_theta %*% solve(I_obs - omega_theta) %*% delta_theta,
+#       name = "theta"
+#     )
   }
+
   
   # Fake psi with shifted eigenvalues if needed:
 #   Mx_Psi_Positive <- OpenMx::mxAlgebra(
@@ -393,56 +479,194 @@ generatelvnetmodel <- function(
 #   )
 #   Mx_PsiCon <- OpenMx::mxConstraint(psi < sqrt(diag2vec(psi)) %*% sqrt(t(diag2vec(psi))) + PsiPlus)
 #   
-  # Implied covariance:
-  if (Nlat > 0){
-    Mx_sigma <- OpenMx::mxAlgebra(
-      lambda %*% solve(I_lat - beta) %*% psi %*% t(solve(I_lat - beta)) %*% t(lambda) + theta, 
-      name = "sigma",
-      dimnames = list(colnames(data),colnames(data)))    
   
-    
-    ### Model:
-    Mx_model <- OpenMx::mxModel(
-      name = name,
-      Mx_data,
-      Mx_means,
-      Mx_lambda,
-      Mx_theta,
-      Mx_psi,
-      Mx_delta_theta,
-      Mx_omega_theta,
-      Mx_delta_psi,
-      Mx_omega_psi,
-      Mx_identity_obs,
-      Mx_identity_lat,
-      Mx_beta,
-      Mx_sigma,
-      expFunction,
-      fitFunction
-      # Mx_PsiCon,
-      # Mx_PsiDiagplus
+
+  
+  ### FIT FUNCTIONS ###
+#   if (lasso ==0){
+#     # Expectation:
+#     expFunction <- OpenMx::mxExpectationNormal(covariance = "sigma")
+#     
+#     # Fit function:
+#     fitFunction <- OpenMx::mxFitFunctionML()
+#     
+#     # Implied covariance:
+#     if (Nlat > 0){
+#       Mx_sigma <- OpenMx::mxAlgebra(
+#         lambda %*% solve(I_lat - beta) %*% psi %*% t(solve(I_lat - beta)) %*% t(lambda) + theta, 
+#         name = "sigma",
+#         dimnames = list(colnames(data),colnames(data)))    
+#       
+#       ### Model:
+#       Mx_model <- OpenMx::mxModel(
+#         name = name,
+#         Mx_data,
+#         Mx_means,
+#         Mx_lambda,
+#         Mx_theta,
+#         Mx_psi,
+#         Mx_delta_theta,
+#         Mx_omega_theta,
+#         Mx_delta_psi,
+#         Mx_omega_psi,
+#         Mx_identity_obs,
+#         Mx_identity_lat,
+#         Mx_beta,
+#         Mx_sigma,
+#         expFunction,
+#         fitFunction
+#         
+#         # Mx_PsiCon,
+#         # Mx_PsiDiagplus
+#       )
+#     } else {
+#       Mx_sigma <- OpenMx::mxAlgebra(
+#         theta, 
+#         name = "sigma",
+#         dimnames = list(colnames(data),colnames(data)))
+#       
+#       
+#       ### Model:
+#       Mx_model <- OpenMx::mxModel(
+#         name = name,
+#         Mx_data,
+#         Mx_means,
+#         Mx_theta,
+#         Mx_delta_theta,
+#         Mx_omega_theta,
+#         Mx_identity_obs,
+#         Mx_sigma,
+#         expFunction,
+#         fitFunction
+#       )
+#     }
+#     
+#   } else {
+    # Observed covariance matrix (used in mxAlgebra for LASSO):
+    mx_observedCovs <- OpenMx::mxMatrix(
+      "Symm",
+      nrow = nrow(covMat),
+      ncol = ncol(covMat),
+      free = FALSE,
+      values = covMat,
+      dimnames = dimnames(covMat),
+      name = "C"
     )
-  } else {
-    Mx_sigma <- OpenMx::mxAlgebra(
-      theta, 
-      name = "sigma",
-      dimnames = list(colnames(data),colnames(data)))
-   
     
-    ### Model:
-    Mx_model <- OpenMx::mxModel(
-      name = name,
-      Mx_data,
-      Mx_means,
-      Mx_theta,
-      Mx_delta_theta,
-      Mx_omega_theta,
-      Mx_identity_obs,
-      Mx_sigma,
-      expFunction,
-      fitFunction
+    # Positive definite shifted sigma:
+    Mx_Sigma_positive <- OpenMx::mxAlgebra(
+      sigma - min(0,(min(eigenval(sigma))-.00001)) * I_obs, name = "sigma_positive"
     )
-  }
+    
+    # Tuning parameter:
+    mx_Tuning <- OpenMx::mxMatrix(nrow=1,ncol=1,free=FALSE,values=lasso,name="tuning")
+      
+    # Number of obsrved variables:
+    mx_P <- OpenMx::mxMatrix(nrow=1,ncol=1,free=FALSE,values=nrow(covMat),name="P")
+    
+    # LASSO penalty:
+    # Construct the penalty:
+
+    if (!missing(lassoMatrix) && length(lassoMatrix) > 0){
+      
+      # Put vechs around any matrix that is not lambda or beta:
+      penString <- ifelse(lassoMatrix %in% c("lambda","beta"), lassoMatrix,
+                          paste0("vech(",lassoMatrix,")")
+                          )
+      
+      # sum absolute values and plus::
+      penString <- paste0("sum(abs(",penString,"))", collapse = " + ")
+      
+      # Multiply with tuning:
+      penString <- paste0("tuning * (",penString,")")
+      
+      # Add to penalty:
+      Penalty <- OpenMx::mxAlgebraFromString( penString,name = "penalty")
+ 
+    } else {
+      Penalty <- OpenMx::mxAlgebra(0,name = "penalty")
+    }
+
+    
+    
+    # LASSO fit function:
+    # logLik <- OpenMx::mxAlgebra(log(det(sigma)) + tr(C %*% solve(sigma)) - log(det(C)) - P + penalty,name = "logLik")
+    
+    # logLik <- OpenMx::mxAlgebra(log(det(sigma)) + tr(C %*% solve(sigma)) - log(det(C)) - P,name = "logLik")
+    logLik <- OpenMx::mxAlgebra(log(det(sigma_positive)) + tr(C %*% solve(sigma_positive)) - log(det(C)) - P + penalty,name = "logLik")
+    
+    
+    # Fit function:
+    fitFunction <- OpenMx::mxFitFunctionAlgebra("logLik", numObs = sampleSize, numStats = ncol(covMat)*(ncol(covMat)+1)/2)
+  
+    if (Nlat > 0){
+      Mx_sigma <- OpenMx::mxAlgebra(
+        lambda %*% solve(I_lat - beta) %*% psi %*% t(solve(I_lat - beta)) %*% t(lambda) + theta, 
+        name = "sigma",
+        dimnames = list(colnames(data),colnames(data)))    
+      
+      ### Model:
+      Mx_model <- OpenMx::mxModel(
+        name = name,
+        Mx_data,
+        Mx_means,
+        Mx_lambda,
+        Mx_theta,
+        Mx_psi,
+        Mx_delta_theta,
+        Mx_omega_theta,
+        Mx_delta_psi,
+        Mx_omega_psi,
+        Mx_identity_obs,
+        Mx_identity_lat,
+        Mx_beta,
+        Mx_sigma,
+        Mx_theta_inverse,
+
+        # LASSO stuff:
+        fitFunction,
+        mx_Tuning,
+        mx_P,
+        logLik,
+        mx_observedCovs,
+        Penalty,
+        Mx_Sigma_positive 
+      )
+      
+    } else {
+      Mx_sigma <- OpenMx::mxAlgebra(
+        theta, 
+        name = "sigma",
+        dimnames = list(colnames(data),colnames(data)))
+      
+      
+      ### Model:
+      Mx_model <- OpenMx::mxModel(
+        name = name,
+        Mx_data,
+        Mx_means,
+        Mx_theta,
+        Mx_delta_theta,
+        Mx_omega_theta,
+        Mx_identity_obs,
+        Mx_sigma,
+        Mx_theta_inverse,
+
+        # LASSO Stuff:
+        fitFunction,
+        mx_Tuning,
+        mx_P,
+        logLik,
+        mx_observedCovs,
+        Penalty,
+        Mx_Sigma_positive 
+      )
+
+    }
+    
+  # }
+  
+
 
   
   
