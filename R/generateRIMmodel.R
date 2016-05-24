@@ -271,34 +271,7 @@ generatelvnetmodel <- function(
   # Psi and omega_psi:
   if (estPsi){
     if (Nlat > 0){
-# 
-#       # Correlations
-#       Mx_psi_R <- OpenMx::mxMatrix(
-#         type = "Symm",
-#         nrow = nrow(psi),
-#         ncol = ncol(psi),
-#         free = is.na(psi) & diag(1,ncol(psi)) != 1,
-#         values = start("psi",startValues,ifelse(is.na(psi),diag(ncol(psi)),psi)),
-#         lbound = -1,
-#         ubound = 1,
-#         name = "psi_Corrs"
-#       )
-# 
-#       # Scaling:
-#       Mx_psi_D <- OpenMx::mxMatrix(
-#         type = "Diag",
-#         nrow = nrow(psi),
-#         ncol = ncol(psi),
-#         free = is.na(psi) & diag(1,ncol(psi)) == 1,
-#         values = start("psi",startValues,ifelse(is.na(psi) & diag(1,ncol(psi)) == 1,diag(ncol(psi)),ifelse(diag(1,ncol(psi)) == 1,sqrt(psi),0))),
-#         lbound = 0,
-#         name = "psi_Scaling"
-#       )
-#       
-#       Mx_psi <- OpenMx::mxAlgebra(
-#         psi_Scaling %*% psi_Corrs- min(0,(min(eigenval(psi_Corrs))-.00001)) * I_lat %*% psi_Scaling, name = "psi"
-#       )
-#       
+
       Mx_psi <- OpenMx::mxMatrix(
         type = "Symm",
         nrow = nrow(psi),
@@ -327,6 +300,11 @@ generatelvnetmodel <- function(
       name = "omega_psi"
     )
     
+#     Mx_psi_inverse <- OpenMx::mxAlgebra(
+#       solve(psi),
+#       name = "psi_inverse"
+#     )
+    
   } else {
     
     Mx_delta_psi <- OpenMx::mxMatrix(
@@ -338,8 +316,8 @@ generatelvnetmodel <- function(
       lbound = 0,
       name = "delta_psi"
     )
-    
-    # Omega:
+#     
+#     # Omega:
     if (Nlat > 0){
       Mx_omega_psi <- OpenMx::mxMatrix(
         type = "Symm",
@@ -351,13 +329,61 @@ generatelvnetmodel <- function(
         ubound = ifelse(diag(nrow(omega_psi)) == 1,0, 0.99),
         name = "omega_psi",
       )      
+    } else {
+      Mx_omega_psi <- OpenMx::mxMatrix(
+        type = "Symm",
+        nrow = nrow(omega_psi),
+        ncol = ncol(omega_psi),
+        name = "omega_psi"
+      )      
     }
-
+#         if (Nlat > 0){
+#           Mx_psi_inverse <- OpenMx::mxMatrix(
+#             type = "Symm",
+#             nrow = Nlat,
+#             ncol = Nlat,
+#             free = is.na(omega_psi) | is.na(delta_psi),
+#             values = diag(1, Nlat, Nlat),
+#             lbound = ifelse(diag(nrow(omega_psi)) == 1,0, -1),
+#             ubound = 1,
+#             name = "psi_inverse"
+#           )      
+#         } else {
+#           Mx_psi_inverse <- OpenMx::mxMatrix(
+#             type = "Symm",
+#             nrow = nrow(omega_psi),
+#             ncol = ncol(omega_psi),
+#             name = "psi_inverse"
+#           )
+#         }
     
+#     Mx_omega_psi <-  OpenMx::mxAlgebra(
+#       I_obs - delta_psi %*% psi_inverse %*% delta_psi, 
+#       name = "omega_psi"
+#     )
+#     
     Mx_psi <- OpenMx::mxAlgebra(
       delta_psi %*% solve(I_lat - omega_psi) %*% delta_psi,
       name = "psi"
     )
+    
+#     Mx_delta_psi <- OpenMx::mxAlgebra(
+#       vec2diag(1/sqrt(diag2vec(psi_inverse))),
+#       name = "delta_psi"
+#     )
+#     
+#     Mx_omega_theta <- OpenMx::mxAlgebra(
+#       I_obs - delta_theta %*% theta_inverse %*% delta_theta,
+#       name = "omega_theta"
+#     )
+#     
+#     Mx_theta <- OpenMx::mxAlgebra(
+#       solve(theta_inverse),
+#       name = "theta"
+#     )
+
+    
+
   }
   
   # Theta and omega_theta:
@@ -622,6 +648,7 @@ generatelvnetmodel <- function(
         Mx_beta,
         Mx_sigma,
         Mx_theta_inverse,
+        # Mx_psi_inverse,
 
         # LASSO stuff:
         fitFunction,
@@ -651,6 +678,7 @@ generatelvnetmodel <- function(
         Mx_identity_obs,
         Mx_sigma,
         Mx_theta_inverse,
+        # Mx_psi_inverse,
 
         # LASSO Stuff:
         fitFunction,

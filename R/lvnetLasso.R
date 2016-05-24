@@ -47,7 +47,7 @@ lvnetLasso <- function(
   lassoTol = 1e-4,
   nTuning = 20,
   tuning.min = 0.01,
-  tuning.max = 10,
+  tuning.max = 1,
   criterion = c("bic","bic2","aic"),
   verbose = TRUE,
   refit = TRUE,
@@ -64,6 +64,13 @@ lvnetLasso <- function(
   # Fit inital model to obtain start values and ind/sat:
   if (verbose){
     cat("Fitting initial model to obtain start-values and independence/saturated models.\n")
+  }
+  
+  if (missing(lassoMatrix)){
+    stop("'lassoMatrix' must be assigned")
+  }
+  if (length(lassoMatrix) > 1){
+    warning("Multiple matrices in LASSO is not recommended. Use sequential estimation (e.g., first, omega_theta, then omega_psi).")
   }
 
   Init <- suppressWarnings(lvnet(data,...))
