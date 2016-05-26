@@ -25,10 +25,12 @@ lvnetCompare <- function(...){
   # Create rows:
   DF <- rbind(data.frame(Df = 0, AIC = NA, 
                          BIC = NA,
+                         EBIC = NA,
                          Chisq = 0),
               do.call(rbind,   lapply(lvnetObjects,function(x){
                 data.frame(Df = x$fitMeasures$df, AIC = x$fitMeasures$aic, 
                            BIC = x$fitMeasures$bic,
+                           EBIC = x$fitMeasures$ebic,
                            Chisq = x$fitMeasures$chisq)
               }))
               )

@@ -50,7 +50,8 @@ lvnet <- function(
   lasso = 0, # IF NOT 0, use lasso penalty
   lassoMatrix, # Vector of character-string of matrices to apply LASSO penalty on
   # optimizer = c("default","SLSQP","NPSOL","CSOLNP")
-  lassoTol = 1e-4
+  lassoTol = 1e-4,
+  ebicTuning = 0.5
   
   # Optimizer:
   # nCores = 1
@@ -90,12 +91,14 @@ lvnet <- function(
     }
   }
   
-  # if LASSO is used, run model first without the LASSO matrix to obtain starting values
+  # If startvalues is lvnet, add to startvalues:
   if (is(startValues,"lvnet") || lasso != 0){
+  # if (is(startValues,"lvnet")){
     if (is(startValues,"lvnet")){
       initRes <- startValues
       startValues <- list()
     } else {
+
       initRes <- lvnet(
         data=data, # Raw data or a covariance matrix
         lambda=lambda, # Lambda design matrix. NA indicates free parameters. If missing and psi is missing, defaults to identity matrix with warning
@@ -114,49 +117,49 @@ lvnet <- function(
       )
     }
 
-    if (is.null(startValues[['lambda']])){
+    if (is.null(startValues[['lambda']]) && ncol(initRes$matrices$lambda)>0 && nrow(initRes$matrices$lambda) > 0 && all(is.finite(initRes$matrices$lambda))){
       startValues[['lambda']] <- initRes$matrices$lambda
       if (!missing(lambda)){
         startValues[['lambda']] <- startValues[['lambda']] * is.na(lambda)
       }
     }
-    if (is.null(startValues[['beta']])){
+    if (is.null(startValues[['beta']])&& ncol(initRes$matrices$beta)>0 && nrow(initRes$matrices$beta) > 0 && all(is.finite(initRes$matrices$beta))){
       startValues[['beta']] <- initRes$matrices$beta
       if (!missing(beta)){
         startValues[['beta']] <- startValues[['beta']] * is.na(beta)
       }
     }
-    if (is.null(startValues[['omega_theta']])){
+    if (is.null(startValues[['omega_theta']]) && ncol(initRes$matrices$omega_theta)>0 && nrow(initRes$matrices$omega_theta) > 0 && all(is.finite(initRes$matrices$omega_theta))){
       startValues[['omega_theta']] <- setSym(initRes$matrices$omega_theta)
       if (!missing(omega_theta)){
         startValues[['omega_theta']] <- startValues[['omega_theta']] * is.na(omega_theta)
       }
     }
-    if (is.null(startValues[['delta_theta']])){
+    if (is.null(startValues[['delta_theta']])  && ncol(initRes$matrices$delta_theta)>0 && nrow(initRes$matrices$delta_theta) > 0 && all(is.finite(initRes$matrices$delta_theta))){
       startValues[['delta_theta']] <- setSym(initRes$matrices$delta_theta)
       if (!missing(delta_theta)){
         startValues[['delta_theta']] <- startValues[['delta_theta']] * is.na(delta_theta)
       }
     }
-    if (is.null(startValues[['omega_psi']])){
+    if (is.null(startValues[['omega_psi']])  && ncol(initRes$matrices$omega_psi)>0 && nrow(initRes$matrices$omega_psi) > 0 && all(is.finite(initRes$matrices$omega_psi))){
       startValues[['omega_psi']] <- setSym(initRes$matrices$omega_psi)
       if (!missing(omega_psi)){
         startValues[['omega_psi']] <- startValues[['omega_psi']] * is.na(omega_psi)
       }
     }
-    if (is.null(startValues[['delta_psi']])){
+    if (is.null(startValues[['delta_psi']])  && ncol(initRes$matrices$delta_psi)>0 && nrow(initRes$matrices$delta_psi) > 0 && all(is.finite(initRes$matrices$delta_psi))){
       startValues[['delta_psi']] <- setSym(initRes$matrices$delta_psi)
       if (!missing(delta_psi)){
         startValues[['delta_psi']] <- startValues[['delta_psi']] * is.na(delta_psi)
       }
     }
-    if (is.null(startValues[['psi']])){
+    if (is.null(startValues[['psi']])   && ncol(initRes$matrices$psi)>0 && nrow(initRes$matrices$psi) > 0 && all(is.finite(initRes$matrices$psi))){
       startValues[['psi']] <- setSym(initRes$matrices$psi)
       if (!missing(psi)){
         startValues[['psi']] <- startValues[['psi']] * is.na(psi)
       }
     }
-    if (is.null(startValues[['theta']])){
+    if (is.null(startValues[['theta']])   && ncol(initRes$matrices$theta)>0 && nrow(initRes$matrices$theta) > 0 && all(is.finite(initRes$matrices$theta))){
       startValues[['theta']] <- setSym(initRes$matrices$theta)
       if (!missing(theta)){
         startValues[['theta']] <- startValues[['theta']] * is.na(theta)
@@ -269,7 +272,6 @@ lvnet <- function(
 #     Results$fitMeasures$npar <- summary(fitMod)$estimatedParameters
 #     Results$fitMeasures$df <- summary(fitMod)$degreesOfFreedom  
 #   }
-
   Results$fitMeasures$fmin <- (sum(diag(S %*% corpcor::pseudoinverse(sigma)))- log(det(S %*% corpcor::pseudoinverse(sigma))) - Nvar)/2
   Results$fitMeasures$chisq <- 2 * (sampleSize - 1) * Results$fitMeasures$fmin
   Results$fitMeasures$pvalue <- pchisq(Results$fitMeasures$chisq, Results$fitMeasures$df, lower.tail = FALSE)
@@ -374,6 +376,8 @@ lvnet <- function(
   BIC2 <- -2*LL + Results$fitMeasures$npar * log(N.star)
   Results$fitMeasures$bic2 <- BIC2
   
+  # Add extended bic:
+  Results$fitMeasures$ebic <-  -2*LL + Results$fitMeasures$npar * log(sampleSize) + 4 *  Results$fitMeasures$npar * ebicTuning * log(sampleSize)  
   
   
   class(Results) <- "lvnet"

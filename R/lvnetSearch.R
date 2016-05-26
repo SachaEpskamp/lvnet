@@ -26,7 +26,7 @@ maxNull <- function(x){
 lvnetSearch <- function(
   data,
   matrix = c("omega_theta","omega_psi","theta","psi"), # Matrix to optimize
-  criterion = c("chisq", "BIC", "AIC"), # Chisquare will attempt to remove edge with no sig difference, and otherwise add edge with sig difference.
+  criterion = c("chisq", "BIC", "AIC","EBIC"), # Chisquare will attempt to remove edge with no sig difference, and otherwise add edge with sig difference.
   start = c("default","empty","full"), # CAN ALSO BE MATRIX "glasso" & "lvglasso" currently disabled. glasso runs glasso on Psi or misfit, after running CFA
   alpha = 0.05,
   lambda,
@@ -271,7 +271,7 @@ lvnetSearch <- function(
     fits <- do.call(lvnetCompare,propModels)[-1,,drop=FALSE]
     
     
-    if (criterion %in% c("AIC","BIC")){
+    if (criterion %in% c("AIC","BIC","EBIC")){
       fits[[criterion]][is.na(fits[[criterion]])] <- Inf
       
       # Any is better?

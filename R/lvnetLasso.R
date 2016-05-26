@@ -48,7 +48,7 @@ lvnetLasso <- function(
   nTuning = 20,
   tuning.min = 0.01,
   tuning.max = 1,
-  criterion = c("BIC","AIC"),
+  criterion = c("BIC","AIC","EBIC"),
   verbose = TRUE,
   refit = TRUE,
   nCores = 1, # Set to > 1 to use parallel computing
@@ -57,7 +57,8 @@ lvnetLasso <- function(
   criterion <- match.arg(criterion)
   criterion <- switch(criterion,
                       BIC = "bic",
-                      AIC = "aic")
+                      AIC = "aic",
+                      EBIC = "ebic")
   # Full results list:
   Results <- list()
   

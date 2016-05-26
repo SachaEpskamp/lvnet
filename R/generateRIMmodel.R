@@ -271,6 +271,18 @@ generatelvnetmodel <- function(
   # Psi and omega_psi:
   if (estPsi){
     if (Nlat > 0){
+      
+      # bounds:
+      ubound <- sqrt(diag(psi)) %o% sqrt(diag(psi))
+      
+      # Force no cors of 1:
+      ubound <- 0.99*ubound
+      diag(ubound) <- diag(psi)
+      
+      ubound <- ifelse(is.na(ubound),Inf,ubound)
+      lbound <- -ubound
+      diag(lbound) <- 0
+      
 
       Mx_psi <- OpenMx::mxMatrix(
         type = "Symm",
@@ -278,7 +290,8 @@ generatelvnetmodel <- function(
         ncol = ncol(psi),
         free = is.na(psi),
         values = start("psi",startValues,ifelse(is.na(psi),diag(ncol(psi)),psi)),
-        lbound = ifelse(diag(nrow(psi)) == 1, 0, NA),
+        lbound = lbound,
+        ubound = ubound,
         name = "psi"
       )
     } else {
