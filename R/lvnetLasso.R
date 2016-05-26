@@ -47,7 +47,7 @@ lvnetLasso <- function(
   lassoTol = 1e-4,
   nTuning = 20,
   tuning.min = 0.01,
-  tuning.max = 1,
+  tuning.max = 0.5,
   criterion = c("BIC","AIC","EBIC"),
   verbose = TRUE,
   refit = TRUE,

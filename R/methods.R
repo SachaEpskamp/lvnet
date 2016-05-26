@@ -27,7 +27,8 @@ summary.lvnet <- function(object, include = c('input','chisq','infcrit','fitindi
       "\n\nInformation criteria:",
       "\n\tAIC:\t\t\t",round(object$fitMeasures$aic,digits),
       "\n\tBIC:\t\t\t",round(object$fitMeasures$bic,digits),
-      "\n\tAdjusted BIC:\t\t",round(object$fitMeasures$bic2,digits)
+      "\n\tAdjusted BIC:\t\t",round(object$fitMeasures$bic2,digits),
+      "\n\tExtended BIC:\t\t",round(object$fitMeasures$ebic,digits)
     )
   }
   
