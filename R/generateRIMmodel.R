@@ -67,6 +67,10 @@ generatelvnetmodel <- function(
   
   Nlat <- ncol(lambda)
   
+  if (nrow(lambda) != ncol(data)){
+    stop("Number of rows in 'lambda' does not equal number of variables in 'data'")
+  }
+  
   # Check lasso matrix and set missing if needed:
   if (!missing(lassoMatrix)){
     if ("omega_psi" %in% lassoMatrix && missing(omega_psi)){

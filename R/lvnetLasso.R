@@ -48,7 +48,7 @@ lvnetLasso <- function(
   nTuning = 20,
   tuning.min = 0.01,
   tuning.max = 0.5,
-  criterion = c("BIC","AIC","EBIC"),
+  criterion = c("bic","aic","ebic"),
   verbose = TRUE,
   refit = TRUE,
   nCores = 1, # Set to > 1 to use parallel computing
@@ -56,9 +56,9 @@ lvnetLasso <- function(
 ){
   criterion <- match.arg(criterion)
   criterion <- switch(criterion,
-                      BIC = "bic",
-                      AIC = "aic",
-                      EBIC = "ebic")
+                      bic = "bic",
+                      aic = "aic",
+                      ebic = "ebic")
   # Full results list:
   Results <- list()
   
@@ -120,6 +120,8 @@ lvnetLasso <- function(
   }
   
   # Refit best model without lasso:
+  dots <- args <- list(...)
+  
   if (refit){
     newMod <- lapply(lassoMatrix, function(m){
       mat <- Results[[best]]$res$matrices[[m]]
@@ -127,7 +129,6 @@ lvnetLasso <- function(
     })
     names(newMod) <- lassoMatrix
 
-    dots <- list(...)
     for (i in seq_along(lassoMatrix)){
       dots[[lassoMatrix[[i]]]] <- newMod[[lassoMatrix[[i]]]] 
     }
@@ -145,7 +146,13 @@ lvnetLasso <- function(
   Output <- list(
    best = bestModel,
    modList = lapply(Results,'[[','res'),
-   tuning = sapply(Results,'[[','tuning')
+   tuning = sapply(Results,'[[','tuning'),
+   lassoMatrix = lassoMatrix,
+   args = c(list(data=data,
+                 fitInd = Init$mxResults$independence,
+                 fitSat = Init$mxResults$saturated,
+                 startValues = Init),
+            args)
   )
   
   class(Output) <- "lvnetLasso"

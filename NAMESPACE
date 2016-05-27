@@ -1,6 +1,7 @@
 # Exports:
 export(EBIClvglasso)
 export(lvglasso)
+export(lassoSelect)
 export(lvnet)
 export(lvnetSearch)
 S3method(summary, lvnet)

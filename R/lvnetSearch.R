@@ -26,7 +26,7 @@ maxNull <- function(x){
 lvnetSearch <- function(
   data,
   matrix = c("omega_theta","omega_psi","theta","psi"), # Matrix to optimize
-  criterion = c("chisq", "BIC", "AIC","EBIC"), # Chisquare will attempt to remove edge with no sig difference, and otherwise add edge with sig difference.
+  criterion = c("chisq", "bic", "aic","ebic"), # Chisquare will attempt to remove edge with no sig difference, and otherwise add edge with sig difference.
   start = c("default","empty","full"), # CAN ALSO BE MATRIX "glasso" & "lvglasso" currently disabled. glasso runs glasso on Psi or misfit, after running CFA
   alpha = 0.05,
   lambda,
@@ -35,8 +35,8 @@ lvnetSearch <- function(
   nCores = 1, # Set to > 1 to use parallel computing
   maxChange, # Set by default to 1 if start = "empty" and all possible edges if start = "full".
   ..., # Arguments sent to lvnet
-  # lvglassoArgs = list(gamma = 0, nRho = 20), # Arguments sent to EBIClvglasso
-  glassoArgs = list(gamma = 0.5, nlambda = 100), # Arguments sent to EBICglasso
+  # lvglassoArgs = list(gamma = 0, nRho = 20), # Arguments sent to ebiclvglasso
+  glassoArgs = list(gamma = 0.5, nlambda = 100), # Arguments sent to ebicglasso
   verbose = TRUE,
   file, # If not missing, reads file to continue and stores results to file.
   startValues = list()
@@ -112,7 +112,7 @@ lvnetSearch <- function(
   #       message("Estimating optimal lvglasso result")
   #     }
   #     
-  #     lvglassoRes <- do.call("EBIClvglasso", c(list(S=covmat, n = sampleSize, nLatents = Nlat), lvglassoArgs  ))
+  #     lvglassoRes <- do.call("ebiclvglasso", c(list(S=covmat, n = sampleSize, nLatents = Nlat), lvglassoArgs  ))
   #     startValues$omega_theta <- lvglassoRes$omega_theta
   #     curMat <- lvglassoRes$omega_theta!=0
   #     
@@ -152,14 +152,14 @@ lvnetSearch <- function(
   #       }
   #       
   #       # Run glasso:
-  #       glassoRes <- do.call(qgraph::EBICglasso, c(list(S=misFit, n = sampleSize), glassoArgs ))
+  #       glassoRes <- do.call(qgraph::ebicglasso, c(list(S=misFit, n = sampleSize), glassoArgs ))
   #       
   #     }
   #     
   #     
   # 
   #     
-  #     glassoRes <- do.call(qgraph::EBICglasso, c(list(S=covmat, n = sampleSize), glassoArgs ))
+  #     glassoRes <- do.call(qgraph::ebicglasso, c(list(S=covmat, n = sampleSize), glassoArgs ))
   #     startValues$omega_theta <- glassoRes
   #     curMat <- glassoRes!=0
   #     
@@ -271,7 +271,7 @@ lvnetSearch <- function(
     fits <- do.call(lvnetCompare,propModels)[-1,,drop=FALSE]
     
     
-    if (criterion %in% c("AIC","BIC","EBIC")){
+    if (criterion %in% c("aic","bic","ebic")){
       fits[[criterion]][is.na(fits[[criterion]])] <- Inf
       
       # Any is better?

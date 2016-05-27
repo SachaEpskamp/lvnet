@@ -117,49 +117,49 @@ lvnet <- function(
       )
     }
 
-    if (is.null(startValues[['lambda']]) && ncol(initRes$matrices$lambda)>0 && nrow(initRes$matrices$lambda) > 0 && all(is.finite(initRes$matrices$lambda))){
+    if (is.null(startValues[['lambda']]) && !is.null(initRes$matrices$lambda) &&  ncol(initRes$matrices$lambda)>0 && nrow(initRes$matrices$lambda) > 0 && all(is.finite(initRes$matrices$lambda))){
       startValues[['lambda']] <- initRes$matrices$lambda
       if (!missing(lambda)){
         startValues[['lambda']] <- startValues[['lambda']] * is.na(lambda)
       }
     }
-    if (is.null(startValues[['beta']])&& ncol(initRes$matrices$beta)>0 && nrow(initRes$matrices$beta) > 0 && all(is.finite(initRes$matrices$beta))){
+    if (is.null(startValues[['beta']])&& !is.null(initRes$matrices$beta) && ncol(initRes$matrices$beta)>0 && nrow(initRes$matrices$beta) > 0 && all(is.finite(initRes$matrices$beta))){
       startValues[['beta']] <- initRes$matrices$beta
       if (!missing(beta)){
         startValues[['beta']] <- startValues[['beta']] * is.na(beta)
       }
     }
-    if (is.null(startValues[['omega_theta']]) && ncol(initRes$matrices$omega_theta)>0 && nrow(initRes$matrices$omega_theta) > 0 && all(is.finite(initRes$matrices$omega_theta))){
+    if (is.null(startValues[['omega_theta']]) &&  !is.null(initRes$matrices$omega_theta) && ncol(initRes$matrices$omega_theta)>0 && nrow(initRes$matrices$omega_theta) > 0 && all(is.finite(initRes$matrices$omega_theta))){
       startValues[['omega_theta']] <- setSym(initRes$matrices$omega_theta)
       if (!missing(omega_theta)){
         startValues[['omega_theta']] <- startValues[['omega_theta']] * is.na(omega_theta)
       }
     }
-    if (is.null(startValues[['delta_theta']])  && ncol(initRes$matrices$delta_theta)>0 && nrow(initRes$matrices$delta_theta) > 0 && all(is.finite(initRes$matrices$delta_theta))){
+    if (is.null(startValues[['delta_theta']])  && !is.null(initRes$matrices$delta_theta) && ncol(initRes$matrices$delta_theta)>0 && nrow(initRes$matrices$delta_theta) > 0 && all(is.finite(initRes$matrices$delta_theta))){
       startValues[['delta_theta']] <- setSym(initRes$matrices$delta_theta)
       if (!missing(delta_theta)){
         startValues[['delta_theta']] <- startValues[['delta_theta']] * is.na(delta_theta)
       }
     }
-    if (is.null(startValues[['omega_psi']])  && ncol(initRes$matrices$omega_psi)>0 && nrow(initRes$matrices$omega_psi) > 0 && all(is.finite(initRes$matrices$omega_psi))){
+    if (is.null(startValues[['omega_psi']])  &&!is.null(initRes$matrices$omega_psi) && ncol(initRes$matrices$omega_psi)>0 && nrow(initRes$matrices$omega_psi) > 0 && all(is.finite(initRes$matrices$omega_psi))){
       startValues[['omega_psi']] <- setSym(initRes$matrices$omega_psi)
       if (!missing(omega_psi)){
         startValues[['omega_psi']] <- startValues[['omega_psi']] * is.na(omega_psi)
       }
     }
-    if (is.null(startValues[['delta_psi']])  && ncol(initRes$matrices$delta_psi)>0 && nrow(initRes$matrices$delta_psi) > 0 && all(is.finite(initRes$matrices$delta_psi))){
+    if (is.null(startValues[['delta_psi']])  && !is.null(initRes$matrices$delta_psi) && ncol(initRes$matrices$delta_psi)>0 && nrow(initRes$matrices$delta_psi) > 0 && all(is.finite(initRes$matrices$delta_psi))){
       startValues[['delta_psi']] <- setSym(initRes$matrices$delta_psi)
       if (!missing(delta_psi)){
         startValues[['delta_psi']] <- startValues[['delta_psi']] * is.na(delta_psi)
       }
     }
-    if (is.null(startValues[['psi']])   && ncol(initRes$matrices$psi)>0 && nrow(initRes$matrices$psi) > 0 && all(is.finite(initRes$matrices$psi))){
+    if (is.null(startValues[['psi']])   && !is.null(initRes$matrices$psi) &&  ncol(initRes$matrices$psi)>0 && nrow(initRes$matrices$psi) > 0 && all(is.finite(initRes$matrices$psi))){
       startValues[['psi']] <- setSym(initRes$matrices$psi)
       if (!missing(psi)){
         startValues[['psi']] <- startValues[['psi']] * is.na(psi)
       }
     }
-    if (is.null(startValues[['theta']])   && ncol(initRes$matrices$theta)>0 && nrow(initRes$matrices$theta) > 0 && all(is.finite(initRes$matrices$theta))){
+    if (is.null(startValues[['theta']])   && !is.null(initRes$matrices$theta) &&  ncol(initRes$matrices$theta)>0 && nrow(initRes$matrices$theta) > 0 && all(is.finite(initRes$matrices$theta))){
       startValues[['theta']] <- setSym(initRes$matrices$theta)
       if (!missing(theta)){
         startValues[['theta']] <- startValues[['theta']] * is.na(theta)
