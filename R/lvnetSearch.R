@@ -46,7 +46,7 @@ lvnetSearch <- function(
     stopifnot(start %in% c("default","empty","full"))
   }
   matrix <- match.arg(matrix)
-  criterion <- toupper(match.arg(criterion))
+  criterion <- match.arg(criterion)
   # start <- match.arg(start)
   
   if (ncol(data) == nrow(data) && isSymmetric(unname(data))){
