@@ -47,6 +47,11 @@ lvnetSearch <- function(
   }
   matrix <- match.arg(matrix)
   criterion <- match.arg(criterion)
+  
+  if (criterion %in% c("aic","bic","ebic")){
+    criterion <- toupper(criterion)
+  }
+  
   # start <- match.arg(start)
   
   if (ncol(data) == nrow(data) && isSymmetric(unname(data))){
@@ -271,7 +276,7 @@ lvnetSearch <- function(
     fits <- do.call(lvnetCompare,propModels)[-1,,drop=FALSE]
     
     
-    if (criterion %in% c("aic","bic","ebic")){
+    if (criterion %in% c("AIC","BIC","EBIC")){
       fits[[criterion]][is.na(fits[[criterion]])] <- Inf
       
       # Any is better?
