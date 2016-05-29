@@ -2,14 +2,16 @@
 \alias{lvnet}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Confirmatory estimate of latent variable network models
+Confirmatory Latent Variable Network Models
 }
 \description{
 This function utilizes OpenMx (Boker et al., 2011, 2014) to confirmatory test latent variable network models between P manifests and M latents. See the details section for information about the modeling framework used. All the input matrices can be assigned R matrices with numbers indicating fixed values and NA indicating a value is free to estimate.
 }
 \usage{
 lvnet(data, lambda, beta, omega_theta, delta_theta, omega_psi, delta_psi, psi, theta, 
-        sampleSize, fitInd, fitSat, startValues = list())
+        sampleSize, fitInd, fitSat, startValues = list(), scale = TRUE, nLatents,
+        lasso = 0,  lassoMatrix, lassoTol = 1e-4, ebicTuning = 0.5
+        )
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -52,6 +54,22 @@ The fit of the saturated model. Used to speed up estimation fitting multiple mod
   \item{startValues}{
 An optional named list containing starting values of each model. e.g., \code{list(lambda = matrix(1,9,3))} would set the starting values of a 10 x 3 lambda matrix to ones.
 }
+\item{scale}{
+Logical, should data be standardized before running lvnet?
+}
+\item{nLatents}{
+The number of latents. Allows for quick specification when \code{lambda} is missing. Not needed is \code{lambda} is assigned.
+}
+\item{lasso}{
+The LASSO tuning parameter.
+}
+\item{lassoMatrix}{
+Character vector indicating the names of matrices to apply LASSO regularization on. e.g., \code{"omega_psi"} or  \code{"omega_theta"}.
+}
+\item{lassoTol}{
+Tolerance for absolute values to be treated as zero in counting parameters.
+}
+\item{ebicTuning}{Tuning parameter used in extended Bayesian Information Criterion.}
 }
 \details{
 The modeling framework follows the all-y LISREL framework for Structural Equation Models (SEM; Hayduk, 1987) to model relationships between P observed variables and M latent variables:
@@ -121,6 +139,12 @@ LNM <- lvnet(Data, lambda = Lambda, omega_psi=Omega_psi)
 
 # Compare fit:
 lvnetCompare(cfa=CFA,lnm=LNM)
+
+# Summary:
+summary(LNM)
+
+# Plot latents:
+plot(LNM, "factorStructure")
 }
 
 

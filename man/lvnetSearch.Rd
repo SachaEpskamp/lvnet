@@ -9,10 +9,10 @@ Performs stepwise search to optimize the structure of omega_theta, omega_psi, th
 }
 \usage{
 lvnetSearch(data, matrix = c("omega_theta", "omega_psi", "theta", "psi"), 
-            criterion = c("chisq", "BIC", "AIC"), start = c("default", "empty", "full", 
-            "lvglasso", "glasso"), alpha = 0.05, lambda, sampleSize, maxIter, ..., 
-            lvglassoArgs = list(gamma = 0, nLambda = 20), glassoArgs = list(gamma = 0, 
-            nlambda = 100), verbose = TRUE, file, startValues = list())
+          criterion = c("bic", "ebic","chisq","aic"), 
+          start =  c("default","empty","full"),  alpha = 0.05, lambda, sampleSize, 
+          maxIter,  nCores = 1, maxChange = 1, ...,  verbose = TRUE, file, 
+          startValues = list())
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -40,14 +40,14 @@ The sample size, only used if \code{data} is a covariance matrix.
   \item{maxIter}{
 The maximum number of edges to test. Defaults to M(M-1)/2
 }
+\item{nCores}{
+Number of cores to use in parallel estimation.
+}
+\item{maxChange}{
+Set to higher than one to change multiple edges in each run. Each iteration, maxChange is reset to max(number of changed edges - 1, 1). Can result in instable results when searching \code{"omega_theta"}.
+}
   \item{\dots}{
 Arguments sent to \code{\link{lvnet}}
-}
-  \item{lvglassoArgs}{
-A list of arguments sent to \code{\link{EBIClvglasso}}
-}
-  \item{glassoArgs}{
-A list of arguments sent to \code{\link[qgraph]{EBICglasso}}
 }
   \item{verbose}{
 Logical if progress should be printed to the consile.

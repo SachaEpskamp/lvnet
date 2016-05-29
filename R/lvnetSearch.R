@@ -26,17 +26,17 @@ maxNull <- function(x){
 lvnetSearch <- function(
   data,
   matrix = c("omega_theta","omega_psi","theta","psi"), # Matrix to optimize
-  criterion = c("chisq", "bic", "aic","ebic"), # Chisquare will attempt to remove edge with no sig difference, and otherwise add edge with sig difference.
+  criterion = c("bic", "ebic","chisq","aic"), # Chisquare will attempt to remove edge with no sig difference, and otherwise add edge with sig difference.
   start = c("default","empty","full"), # CAN ALSO BE MATRIX "glasso" & "lvglasso" currently disabled. glasso runs glasso on Psi or misfit, after running CFA
   alpha = 0.05,
   lambda,
   sampleSize,
   maxIter,
   nCores = 1, # Set to > 1 to use parallel computing
-  maxChange, # Set by default to 1 if start = "empty" and all possible edges if start = "full".
+  maxChange = 1, # Set by default to 1 if start = "empty" and all possible edges if start = "full".
   ..., # Arguments sent to lvnet
   # lvglassoArgs = list(gamma = 0, nRho = 20), # Arguments sent to ebiclvglasso
-  glassoArgs = list(gamma = 0.5, nlambda = 100), # Arguments sent to ebicglasso
+  # glassoArgs = list(gamma = 0.5, nlambda = 100), # Arguments sent to ebicglasso
   verbose = TRUE,
   file, # If not missing, reads file to continue and stores results to file.
   startValues = list()
@@ -232,7 +232,16 @@ lvnetSearch <- function(
         
         lvnetArgs[[matrix]] <- curMat2modMat(propMat, matrix)
         lvnetArgs$startValues[[matrix]] <- curEst * propMat
-        propModels[[i]] <- do.call("lvnet", lvnetArgs)
+        propModels[[i]] <- try(do.call("lvnet", lvnetArgs),silent = TRUE)
+        if (is(propModels[[i]],"try-error")){
+          propModels[[i]] <- curMod
+          propModels[[i]]$fitMeasures[c("aic","bic","ebic")] <- Inf
+          if (curMat[upTriElements[i,1],upTriElements[i,2]]){
+            propModels[[i]]$fitMeasures[c("chisq")] <- 0 
+          } else {
+            propModels[[i]]$fitMeasures[c("chisq")] <- Inf
+          }
+        }
         
         
         if (verbose){
@@ -261,7 +270,16 @@ lvnetSearch <- function(
         
         lvnetArgs[[matrix]] <- curMat2modMat(propMat, matrix)
         lvnetArgs$startValues[[matrix]] <- curEst * propMat
-        do.call("lvnet", lvnetArgs)
+        propModels[[i]] <- try(do.call("lvnet", lvnetArgs),silent = TRUE)
+        if (is(propModels[[i]],"try-error")){
+          propModels[[i]] <- curMod
+          propModels[[i]]$fitMeasures[c("aic","bic","ebic")] <- Inf
+          if (curMat[upTriElements[i,1],upTriElements[i,2]]){
+            propModels[[i]]$fitMeasures[c("chisq")] <- 0 
+          } else {
+            propModels[[i]]$fitMeasures[c("chisq")] <- Inf
+          }
+        }
       })
       
       # Stop cluster:
@@ -272,7 +290,6 @@ lvnetSearch <- function(
     
     # Create table:
     origFit <- anova(curMod)[-1,,drop=FALSE]
-    
     fits <- do.call(lvnetCompare,propModels)[-1,,drop=FALSE]
     
     
@@ -377,7 +394,8 @@ lvnetSearch <- function(
   Results <- list(
     best = curMod,
     # modList = modList,
-    niter = it)
+    niter = it,
+    criterion = criterion)
   
   class(Results) <- c("lvnetSearch","list")
   return(Results)

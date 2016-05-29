@@ -26,13 +26,18 @@ generatelvnetmodel <- function(
   nLatents # allows for quick specification of fully populated lambda matrix.
   ){
   
-  # Stupid things to fool R check:
+  # Silly things to fool R check:
   I_lat <- NULL
   I_obs <- NULL
   PsiPlus <- NULL
   vec2diag <- NULL
   diag2vec <- NULL
-
+  theta_inverse <- NULL
+  eigenval <- NULL
+  sigma_positive <- NULL
+  P <- NULL
+  penalty <- NULL
+  
   # Check for input:
   stopifnot(is.matrix(data)|is.data.frame(data))
   

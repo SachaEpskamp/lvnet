@@ -152,7 +152,9 @@ lvnetLasso <- function(
                  fitInd = Init$mxResults$independence,
                  fitSat = Init$mxResults$saturated,
                  startValues = Init),
-            args)
+            args),
+   criterion = criterion,
+   bestID = best
   )
   
   class(Output) <- "lvnetLasso"
