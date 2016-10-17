@@ -247,7 +247,7 @@ generatelvnetmodel <- function(
       nrow = nrow(beta),
       ncol = ncol(beta),
       free = is.na(beta),
-      values = start("beta",startValues,0),
+      values = start("beta",startValues,ifelse(is.na(beta),0,beta)),
       name = "beta"
     )
   } else {
@@ -346,7 +346,7 @@ generatelvnetmodel <- function(
         nrow = nrow(omega_psi),
         ncol = ncol(omega_psi),
         free = is.na(omega_psi),
-        values = start("omega_psi",startValues,0),
+        values = start("omega_psi",startValues,ifelse(is.na(omega_psi),0,omega_psi)),
         lbound = ifelse(diag(nrow(omega_psi)) == 1,0, -0.99),
         ubound = ifelse(diag(nrow(omega_psi)) == 1,0, 0.99),
         name = "omega_psi",
