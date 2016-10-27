@@ -51,13 +51,15 @@ lvnet <- function(
   lassoMatrix, # Vector of character-string of matrices to apply LASSO penalty on
   # optimizer = c("default","SLSQP","NPSOL","CSOLNP")
   lassoTol = 1e-4,
-  ebicTuning = 0.5
+  ebicTuning = 0.5,
+  mimic = c("lvnet","lavaan")
   
   # Optimizer:
   # nCores = 1
 ){
   
   Nvar <- ncol(data)
+  mimic <- match.arg(mimic)
   
   # Check args:
   if (!missing(lambda) & !missing(nLatents)){
@@ -190,7 +192,8 @@ lvnet <- function(
     lasso = lasso,
     lassoMatrix=lassoMatrix,
     scale=scale,
-    nLatents=nLatents)
+    nLatents=nLatents,
+    mimic=mimic)
   
   
   #   capture.output(fitMod <- OpenMx::mxRun(mod, silent = TRUE,
@@ -206,9 +209,9 @@ lvnet <- function(
       psi = matrix(NA,Nvar,Nvar), 
       theta = matrix(0, Nvar,Nvar), 
       name = "saturated",
-      sampleSize = sampleSize
+      sampleSize = sampleSize,
+      mimic=mimic
     )
-    
     
     capture.output(fitSat <- mxRun(satMod, silent = TRUE,
                                    suppressWarnings = TRUE)  ,type="message")
@@ -222,7 +225,8 @@ lvnet <- function(
       psi = diag(NA, Nvar, Nvar), 
       theta = matrix(0, Nvar, Nvar), 
       name = "independence",
-      sampleSize = sampleSize
+      sampleSize = sampleSize,
+      mimic=mimic
     )
     
     capture.output(fitInd <- mxRun(indMod, silent = TRUE,
@@ -355,7 +359,6 @@ lvnet <- function(
   
   
   # information criteria:
-  
   # Saturated log-likelihood:
   c <- sampleSize*Nvar/2 * log(2 * pi)
   satLL <- ( -c -(sampleSize/2) * log(det(S)) - (sampleSize/2)*Nvar )
