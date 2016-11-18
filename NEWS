@@ -1,3 +1,6 @@
 Changes in Version 0.3:
 	o Fixed a bug where higher order latent variables were not usuable
-	o Added the 'mimic' argument. mimic = "lavaan" will mimic lavaan results when using std.ov = TRUE in lavaan.
+	o Added the 'mimic' argument. mimic = "lavaan" will mimic lavaan results (now default).
+	  o lvnet should now return the same fit as lavaan when std.lv=TRUE is used in lavaan.
+	o 'scale' now defaults to FALSE
+	o Added the function 'lav2lvnet' to easily generate lvnet input from a lavaan model

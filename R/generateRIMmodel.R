@@ -22,7 +22,7 @@ generatelvnetmodel <- function(
   startValues = list(),
   lasso = 0,
   lassoMatrix = "",
-  scale = TRUE,
+  scale = FALSE,
   nLatents, # allows for quick specification of fully populated lambda matrix.
   mimic = c("lvnet","lavaan")
   ){
@@ -204,18 +204,20 @@ generatelvnetmodel <- function(
     #     )
     
     data <- as.matrix(data)
-    covMat <- cov(data, use = "pairwise.complete.obs") * (sampleSize - 1)/sampleSize
+    covMat <- cov(data, use = "pairwise.complete.obs") # * (sampleSize - 1)/sampleSize
   }
   
   if (scale){
     covMat <- setSym(cov2cor(covMat))
-    if (mimic == "lavaan"){
-      covMat <- covMat * (sampleSize - 1)/sampleSize
-    }
   } else {
     if (lasso != 0){
       warning("It is advised to set 'scale = TRUE' when using LASSO estimation.")
     }
+  }
+  
+  # Scale to divide by N:
+  if (mimic == "lavaan"){
+    covMat <- covMat * (sampleSize - 1)/sampleSize
   }
   
   # 
@@ -298,7 +300,6 @@ generatelvnetmodel <- function(
       lbound <- -ubound
       diag(lbound) <- 0
       
-
       Mx_psi <- OpenMx::mxMatrix(
         type = "Symm",
         nrow = nrow(psi),

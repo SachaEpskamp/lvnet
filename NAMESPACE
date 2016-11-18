@@ -1,4 +1,5 @@
 # Exports:
+export(lav2lvnet)
 export(EBIClvglasso)
 export(lvglasso)
 export(lassoSelect)
@@ -39,6 +40,7 @@ importFrom(OpenMx,"mxFitFunctionML")
 importFrom(OpenMx,"mxAlgebra")
 importFrom(OpenMx,"mxRun")
 importFrom(qgraph,"EBICglasso")
+importFrom(lavaan,"lavaanify")
 import(parallel)
 
   importFrom("graphics", "par", "plot")
