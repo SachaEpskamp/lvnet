@@ -21,6 +21,8 @@ export(lvnetLasso)
 S3method(plot, lvnet)
 S3method(plot, lvnetLasso)
 S3method(plot, lvnetSearch)
+S3method(print, ggmFit)
+S3method(plot, ggmFit)
 
 
 # Imports
