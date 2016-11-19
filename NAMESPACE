@@ -41,6 +41,7 @@ importFrom(OpenMx,"mxAlgebra")
 importFrom(OpenMx,"mxRun")
 importFrom(qgraph,"EBICglasso")
 importFrom(lavaan,"lavaanify")
+importFrom(semPlot,"modelMatrices")
 import(parallel)
 
   importFrom("graphics", "par", "plot")

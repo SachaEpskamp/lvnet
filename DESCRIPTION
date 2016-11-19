@@ -6,6 +6,6 @@ Author: Sacha Epskamp
 Maintainer: Sacha Epskamp <mail@sachaepskamp.com>
 Description: Estimate, fit and compare Structural Equation Models (SEM) and network models (Gaussian Graphical Models; GGM) using OpenMx. Allows for two possible generalizations to include GGMs in SEM: GGMs can be used between latent variables (latent network modeling; LNM) or between residuals (residual network modeling; RNM).
 License: GPL-2
-Imports: glasso, qgraph, Matrix, psych, mvtnorm, parallel, corpcor, dplyr, methods, lavaan
+Imports: glasso, qgraph, Matrix, psych, mvtnorm, parallel, corpcor, dplyr, methods, lavaan, semPlot
 Suggests: lavaan
 Depends: OpenMx
