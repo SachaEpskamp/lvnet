@@ -55,8 +55,8 @@ lvnetFit <- lvnet(Data, lambda = mod$lambda, psi = mod$psi)
 
 # Compare:
 Compare <- data.frame(
-  lvnet = round(unlist(CFA$fitMeasures)[c("npar","df","chisq","fmin","aic","bic","rmsea","cfi","tli","nfi","logl")],3),
-  lavaan = round(fitMeasures(fit)[c("npar","df","chisq","fmin","aic","bic","rmsea","cfi","tli","nfi","logl")],3))
+  lvnet = round(unlist(lvnetFit$fitMeasures)[c("npar","df","chisq","fmin","aic","bic","rmsea","cfi","tli","nfi","logl")],3),
+  lavaan = round(fitMeasures(lavFit)[c("npar","df","chisq","fmin","aic","bic","rmsea","cfi","tli","nfi","logl")],3))
 
 Compare
 }
