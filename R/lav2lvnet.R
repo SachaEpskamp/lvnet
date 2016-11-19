@@ -13,7 +13,7 @@ lav2lvnet <- function(
   varNames <- colnames(data)
   
   # Lavaanify:
-  lavMod <- do.call(semPlot::lavaanify,c(list(model), lavaanifyOps))
+  lavMod <- do.call(lavaan::lavaanify,c(list(model), lavaanifyOps))
   
   # Test multiple groups:
   if (length(unique(lavMod$group)) > 1) stop("lvnet only supports single group analysis")
