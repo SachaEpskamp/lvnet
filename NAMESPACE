@@ -1,4 +1,5 @@
 # Exports:
+export(ggmFit)
 export(lav2lvnet)
 export(EBIClvglasso)
 export(lvglasso)

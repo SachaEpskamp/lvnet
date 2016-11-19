@@ -4,3 +4,4 @@ Changes in Version 0.3:
 	  o lvnet should now return the same fit as lavaan when std.lv=TRUE is used in lavaan.
 	o 'scale' now defaults to FALSE
 	o Added the function 'lav2lvnet' to easily generate lvnet input from a lavaan model
+	o Added 'ggmFit' to fit a given partial correlation network (Gaussian graphical model; GGM)
