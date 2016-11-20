@@ -41,6 +41,7 @@ Sacha Epskamp <mail@sachaepskamp.com>
 \examples{
 library("lavaan")
 library("psych")
+library("qgraph")
 
 # Load BFI data:
 data(bfi)

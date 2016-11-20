@@ -50,6 +50,6 @@ import(parallel)
   importFrom("graphics", "par", "plot")
   importFrom("methods", "is")
   importFrom("stats", "C", "anova", "cov", "loadings", "pchisq",
-             "promax", "residuals", "sigma", "uniroot")
+             "promax", "residuals", "uniroot")
   importFrom("utils", "capture.output", "setTxtProgressBar",
              "txtProgressBar")
