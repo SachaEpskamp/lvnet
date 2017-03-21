@@ -40,6 +40,7 @@ generatelvnetmodel <- function(
   sigma_positive <- NULL
   P <- NULL
   penalty <- NULL
+  sigma <- NULL
   
   # Check for input:
   stopifnot(is.matrix(data)|is.data.frame(data))

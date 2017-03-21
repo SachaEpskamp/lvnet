@@ -1,5 +1,5 @@
 # Exports:
-export(ggmFit)
+export(lvnetRefit)
 export(lav2lvnet)
 export(EBIClvglasso)
 export(lvglasso)
@@ -21,8 +21,6 @@ export(lvnetLasso)
 S3method(plot, lvnet)
 S3method(plot, lvnetLasso)
 S3method(plot, lvnetSearch)
-S3method(print, ggmFit)
-S3method(plot, ggmFit)
 
 
 # Imports
@@ -46,6 +44,10 @@ importFrom(qgraph,"EBICglasso")
 importFrom(lavaan,"lavaanify")
 importFrom(semPlot,"modelMatrices")
 import(parallel)
+
+# ggmFit:
+importFrom(qgraph,"ggmFit")
+export(ggmFit)
 
   importFrom("graphics", "par", "plot")
   importFrom("methods", "is")

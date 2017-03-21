@@ -26,7 +26,7 @@ countPars <- function(x,tol=sqrt(.Machine$double.eps)){
   nVar <- ncol(x@data@observed)
   nObs <- nVar * (nVar+1) / 2
   
-  return(list(nPar=nPar,DF=nObs - nPar))
+  return(list(nPar=nPar,DF=nObs - nPar,nObs=nObs,nVar=nVar))
 }
 
 lvnet <- function(
@@ -270,6 +270,13 @@ lvnet <- function(
 
   Pars <- countPars(fitMod, ifelse(lasso==0,sqrt(.Machine$double.eps),lassoTol))
     
+  
+  # Number of variables:
+  Results$fitMeasures$nvar <- Pars$nVar
+  
+  # Number of observations:
+  Results$fitMeasures$nobs <- Pars$nObs
+
     Results$fitMeasures$npar <- Pars$nPar
     Results$fitMeasures$df <-  Pars$DF
 #   } else {
@@ -390,6 +397,7 @@ lvnet <- function(
   # Add extended bic:
   Results$fitMeasures$ebic <-  -2*LL + Results$fitMeasures$npar * log(sampleSize) + 4 *  Results$fitMeasures$npar * ebicTuning * log(sampleSize)  
   
+  Results$fitMeasures$ebicTuning <- ebicTuning
   
   class(Results) <- "lvnet"
   

@@ -123,6 +123,9 @@ lvnetLasso <- function(
   dots <- args <- list(...)
   
   if (refit){
+    if (verbose){
+      cat("Re-fitting best model.\n")
+    }
     newMod <- lapply(lassoMatrix, function(m){
       mat <- Results[[best]]$res$matrices[[m]]
       ifelse(abs(mat) > lassoTol,NA,0)

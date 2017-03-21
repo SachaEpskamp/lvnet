@@ -9,8 +9,9 @@ This function utilizes OpenMx (Boker et al., 2011, 2014) to confirmatory test la
 }
 \usage{
 lvnet(data, lambda, beta, omega_theta, delta_theta, omega_psi, delta_psi, psi, theta, 
-        sampleSize, fitInd, fitSat, startValues = list(), scale = TRUE, nLatents,
-        lasso = 0,  lassoMatrix, lassoTol = 1e-4, ebicTuning = 0.5
+        sampleSize, fitInd, fitSat, startValues = list(), scale = FALSE, nLatents,
+        lasso = 0,  lassoMatrix, lassoTol = 1e-4, ebicTuning = 0.5, 
+        mimic = c("lavaan","lvnet")
         )
 }
 %- maybe also 'usage' for other objects documented here.
@@ -70,6 +71,7 @@ Character vector indicating the names of matrices to apply LASSO regularization 
 Tolerance for absolute values to be treated as zero in counting parameters.
 }
 \item{ebicTuning}{Tuning parameter used in extended Bayesian Information Criterion.}
+\item{mimic}{If set to \code{"lavaan"} (default), covariance matrix is rescaled and N is used rather than N - 1 in likelihood computation.}
 }
 \details{
 The modeling framework follows the all-y LISREL framework for Structural Equation Models (SEM; Hayduk, 1987) to model relationships between P observed variables and M latent variables:
