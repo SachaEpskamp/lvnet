@@ -34,6 +34,7 @@ Sacha Epskamp <mail@sachaepskamp.com>
 }
 
 \examples{
+\dontrun{
 library("lavaan")
 
 # Load dataset:
@@ -61,4 +62,5 @@ Compare <- data.frame(
                                       "cfi","tli","nfi","logl")],3))
 
 Compare
+}
 }

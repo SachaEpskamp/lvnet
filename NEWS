@@ -1,3 +1,8 @@
+Changes in Version 0.3.1:
+	o 'ggmFit' is now moved to qgraph and exported by lvnet
+	    o Several updates to ggmFit in qgraph
+	o Added 'lvnetRefit' to refit an lvnet model to new data
+
 Changes in Version 0.3:
 	o 'scale' now defaults to FALSE!
 	  o Due to this change, some values such as the BIC will be different
