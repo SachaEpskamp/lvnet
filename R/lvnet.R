@@ -52,7 +52,8 @@ lvnet <- function(
   # optimizer = c("default","SLSQP","NPSOL","CSOLNP")
   lassoTol = 1e-4,
   ebicTuning = 0.5,
-  mimic = c("lavaan","lvnet")
+  mimic = c("lavaan","lvnet"),
+  fitFunction = c("default","ML","penalizedML")
   
   # Optimizer:
   # nCores = 1
@@ -193,7 +194,8 @@ lvnet <- function(
     lassoMatrix=lassoMatrix,
     scale=scale,
     nLatents=nLatents,
-    mimic=mimic)
+    mimic=mimic,
+    fitFunction=fitFunction)
   
   
   #   capture.output(fitMod <- OpenMx::mxRun(mod, silent = TRUE,
@@ -210,7 +212,8 @@ lvnet <- function(
       theta = matrix(0, Nvar,Nvar), 
       name = "saturated",
       sampleSize = sampleSize,
-      mimic=mimic
+      mimic=mimic,
+      fitFunction=fitFunction
     )
     
     capture.output(fitSat <- mxRun(satMod, silent = TRUE,
@@ -226,7 +229,8 @@ lvnet <- function(
       theta = matrix(0, Nvar, Nvar), 
       name = "independence",
       sampleSize = sampleSize,
-      mimic=mimic
+      mimic=mimic,
+      fitFunction=fitFunction
     )
     
     capture.output(fitInd <- mxRun(indMod, silent = TRUE,

@@ -18,7 +18,8 @@ lassoSearchFun <- function(i, tuning, Init, args, verbose, lassoMatrix,nTuning,l
   Res$res <- suppressWarnings(
       do.call(lvnet,c(args,list(fitInd = Init$mxResults$independence,
                                 fitSat = Init$mxResults$saturated,
-                                startValues = Init))))
+                                startValues = Init,
+                                fitFunction = "penalizedML"))))
         
         #data,lassoMatrix=lassoMatrix,lassoTol=lassoTol,lasso=tuning,
 
@@ -124,7 +125,7 @@ lvnetLasso <- function(
   
   if (refit){
     if (verbose){
-      cat("Re-fitting best model.\n")
+      cat("\nRe-fitting best model.\n")
     }
     newMod <- lapply(lassoMatrix, function(m){
       mat <- Results[[best]]$res$matrices[[m]]

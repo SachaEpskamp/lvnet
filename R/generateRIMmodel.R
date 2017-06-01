@@ -24,10 +24,20 @@ generatelvnetmodel <- function(
   lassoMatrix = "",
   scale = FALSE,
   nLatents, # allows for quick specification of fully populated lambda matrix.
-  mimic = c("lvnet","lavaan")
+  mimic = c("lvnet","lavaan"),
+  fitFunction = c("default","ML","penalizedML")
   ){
   
   mimic <- match.arg(mimic)
+  
+  fitFunction <- match.arg(fitFunction)
+  if (fitFunction=="default"){
+    fitFunction <- ifelse(lasso == 0, "ML", "penalizedML")
+  }
+  
+  if (lasso != 0 && fitFunction != "penalizedML"){
+    stop("fitFunction must be 'penalizedML' when lasso != 0")
+  }
   
   # Silly things to fool R check:
   I_lat <- NULL
@@ -611,7 +621,7 @@ generatelvnetmodel <- function(
     
     # Positive definite shifted sigma:
     Mx_Sigma_positive <- OpenMx::mxAlgebra(
-      sigma - min(0,(min(eigenval(sigma))-.00001)) * I_obs, name = "sigma_positive"
+      sigma - min(0,(min(eigenval(sigma))-.00001)) * I_obs, name = "sigma_positive", dimnames = dimnames(covMat)
     )
     
     # Tuning parameter:
@@ -649,11 +659,29 @@ generatelvnetmodel <- function(
     # logLik <- OpenMx::mxAlgebra(log(det(sigma)) + tr(C %*% solve(sigma)) - log(det(C)) - P + penalty,name = "logLik")
     
     # logLik <- OpenMx::mxAlgebra(log(det(sigma)) + tr(C %*% solve(sigma)) - log(det(C)) - P,name = "logLik")
-    logLik <- OpenMx::mxAlgebra(log(det(sigma_positive)) + tr(C %*% solve(sigma_positive)) - log(det(C)) - P + penalty,name = "logLik")
-    
     
     # Fit function:
-    fitFunction <- OpenMx::mxFitFunctionAlgebra("logLik", numObs = sampleSize, numStats = ncol(covMat)*(ncol(covMat)+1)/2)
+    if (fitFunction == "ML"){
+      #     expFunction <- OpenMx::mxExpectationNormal(covariance = "sigma")
+      #     
+      #     # Fit function:
+      #     fitFunction <- OpenMx::mxFitFunctionML()
+      
+      # Normal ML estimation
+      logLik <- OpenMx::mxExpectationNormal(covariance = "sigma_positive")
+      
+      # Fit function:
+      fitFunction <- OpenMx::mxFitFunctionML()
+      
+    } else {
+      # Penalized ML
+      logLik <- OpenMx::mxAlgebra(log(det(sigma_positive)) + tr(C %*% solve(sigma_positive)) - log(det(C)) - P + penalty,name = "logLik")
+      
+      # Fit function:
+      fitFunction <- OpenMx::mxFitFunctionAlgebra("logLik", numObs = sampleSize, numStats = ncol(covMat)*(ncol(covMat)+1)/2)      
+    }
+    
+
   
     if (Nlat > 0){
       Mx_sigma <- OpenMx::mxAlgebra(
