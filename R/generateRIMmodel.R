@@ -73,6 +73,7 @@ generatelvnetmodel <- function(
   P <- NULL
   penalty <- NULL
   sigma <- NULL
+  Lambda <- NULL
   
   # Check for input:
   stopifnot(is.matrix(data)|is.data.frame(data))
