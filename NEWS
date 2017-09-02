@@ -1,3 +1,7 @@
+Changes in Version 0.3.2
+  o Summary output now contains parameter labels
+  o Equality constraints now supported by supplying labels in model matrices
+
 Changes in Version 0.3.1:
 	o 'ggmFit' is now moved to qgraph and exported by lvnet
 	    o Several updates to ggmFit in qgraph

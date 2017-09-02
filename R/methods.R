@@ -93,7 +93,7 @@ summary.lvnet <- function(object, include = c('input','chisq','infcrit','fitindi
     
     parMat[['Estimate']] <- round(parMat[['Estimate']],digits)
     parMat[['Std.Error']] <- round(parMat[['Std.Error']],digits)
-    print.data.frame(parMat[,c('matrix','row','col','Estimate')], row.names=FALSE)
+    print.data.frame(parMat[,c('matrix','row','col','name','Estimate')], row.names=FALSE)
   }
   
 }

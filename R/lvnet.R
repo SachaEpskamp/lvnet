@@ -7,10 +7,10 @@ setSym <- function(x) {
 
 countPars <- function(x,tol=sqrt(.Machine$double.eps)){
   Matrices <- x@matrices
-  
+
   # Pars per matrix:
   counts <- sapply(Matrices,function(mat){
-    symm <- "SymmMatrix" %in% class(mat) 
+    symm <- "SymmMatrix" %in% class(mat)
     # Index (either full or UT incl diag):
     if (symm){
       ix <- upper.tri(mat@values,diag=TRUE)
@@ -18,8 +18,10 @@ countPars <- function(x,tol=sqrt(.Machine$double.eps)){
       ix <- matrix(TRUE,nrow(mat@values),ncol(mat@values))
     }
     free <- mat@free
-    
-    sum(abs(mat@values[free & ix]) > tol) 
+
+    # sum(abs(mat@values[free & ix]) > tol)    
+    # Collect labels:
+    length(unique(c(mat$labels[abs(mat@values) > tol & free & ix])))
   })
   
   nPar <- sum(counts)
@@ -53,12 +55,13 @@ lvnet <- function(
   lassoTol = 1e-4,
   ebicTuning = 0.5,
   mimic = c("lavaan","lvnet"),
-  fitFunction = c("default","ML","penalizedML")
+  fitFunction = c("penalizedML","ML"),
+  exogenous # Vector of exogenous variables
   
   # Optimizer:
   # nCores = 1
 ){
-  
+  fitFunction <- match.arg(fitFunction)
   Nvar <- ncol(data)
   mimic <- match.arg(mimic)
   
@@ -221,11 +224,24 @@ lvnet <- function(
   }
   
   if (missing(fitInd)){
+    
+    # Construct Psi
+    psiInd <- diag(NA, Nvar, Nvar)
+    if (!missing(exogenous)){
+      if (is.numeric(exogenous)){
+        psiInd[exogenous,exogenous] <- NA
+      } else {
+        inds <- which(colnames(data) %in% exogenous)
+        psiInd[exogenous,exogenous] <- NA
+      }
+    } 
+ 
+    
     # Independence model:
     indMod <- generatelvnetmodel(
       data = data, 
       lambda = diag(Nvar), 
-      psi = diag(NA, Nvar, Nvar), 
+      psi = psiInd, 
       theta = matrix(0, Nvar, Nvar), 
       name = "independence",
       sampleSize = sampleSize,
