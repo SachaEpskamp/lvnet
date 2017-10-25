@@ -73,7 +73,7 @@ generatelvnetmodel <- function(
   P <- NULL
   penalty <- NULL
   sigma <- NULL
-  Lambda <- NULL
+  # Lambda <- NULL
   
   # Check for input:
   stopifnot(is.matrix(data)|is.data.frame(data))
@@ -268,7 +268,7 @@ generatelvnetmodel <- function(
       type = "Full",
       nrow = nrow(lambda),
       ncol = ncol(lambda),
-      free = isFree(Lambda),
+      free = isFree(lambda),
       labels = toLabel(lambda,"lambda"),
       values = start("lambda",startValues,ifelse(isFree(lambda),1,toFree(lambda))),
       name = "lambda"
