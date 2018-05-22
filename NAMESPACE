@@ -45,9 +45,7 @@ importFrom(lavaan,"lavaanify")
 importFrom(semPlot,"modelMatrices")
 import(parallel)
 
-# ggmFit:
-importFrom(qgraph,"ggmFit")
-export(ggmFit)
+
 
   importFrom("graphics", "par", "plot")
   importFrom("methods", "is")

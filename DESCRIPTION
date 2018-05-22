@@ -1,7 +1,7 @@
 Package: lvnet
 Type: Package
 Title: Latent Variable Network Modeling
-Version: 0.3.2
+Version: 0.3.3
 Author: Sacha Epskamp
 Maintainer: Sacha Epskamp <mail@sachaepskamp.com>
 Description: Estimate, fit and compare Structural Equation Models (SEM) and network models (Gaussian Graphical Models; GGM) using OpenMx. Allows for two possible generalizations to include GGMs in SEM: GGMs can be used between latent variables (latent network modeling; LNM) or between residuals (residual network modeling; RNM). For details, see Epskamp, Rhemtulla and Borsboom (2017) <doi:10.1007/s11336-017-9557-x>.

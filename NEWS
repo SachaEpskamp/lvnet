@@ -1,3 +1,6 @@
+Changes in Version 0.3.3
+  o 'ggmFit' is no longer exported by lvnet
+
 Changes in Version 0.3.2
   o Summary output now contains parameter labels
   o Equality constraints now supported by supplying labels in model matrices
