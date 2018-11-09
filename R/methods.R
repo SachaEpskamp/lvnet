@@ -88,7 +88,7 @@ summary.lvnet <- function(object, include = c('input','chisq','infcrit','fitindi
     delta_theta$matrix <- "delta_theta"
      
     
-    parMat <- rbind_list(parMat[parMat$matrix != "theta_inverse",],theta_inverse,delta_theta) 
+    parMat <- dplyr::bind_rows(parMat[parMat$matrix != "theta_inverse",],theta_inverse,delta_theta) 
     }
     
     parMat[['Estimate']] <- round(parMat[['Estimate']],digits)

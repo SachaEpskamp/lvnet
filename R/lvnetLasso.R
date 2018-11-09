@@ -1,5 +1,5 @@
 # Fun:
-lassoSearchFun <- function(i, tuning, Init, args, verbose, lassoMatrix,nTuning,lassoTol){
+lassoSearchFun <- function(i, tuning, Init, args, verbose, lassoMatrix,nTuning,lassoTol, refitAll = FALSE){
 
   if (verbose){
     cat(paste("\rIteration",i, "of ",nTuning))
@@ -23,6 +23,37 @@ lassoSearchFun <- function(i, tuning, Init, args, verbose, lassoMatrix,nTuning,l
         
         #data,lassoMatrix=lassoMatrix,lassoTol=lassoTol,lasso=tuning,
 
+  # Refit without LASSO
+  if (refitAll){
+    
+    newMod <- lapply(lassoMatrix, function(m){
+      mat <- Res$res$matrices[[m]]
+      ifelse(abs(mat) > lassoTol,NA,0)
+    })
+    names(newMod) <- lassoMatrix
+    
+    # Structure args:
+    argsRefit <- args
+    
+    # Remove LASSO:
+    # argsRefit$lasso <- 0
+    argsRefit <- argsRefit[!names(argsRefit) %in% c("data","lassoMatrix","lassoTol","lasso")]
+    # argsRefit$data <- NULL
+    # argsRefit$lassoMatrix <- NULL
+    # argsRefit$lassoTol <- NULL
+    
+    for (i in seq_along(lassoMatrix)){
+      argsRefit[[lassoMatrix[[i]]]] <- newMod[[lassoMatrix[[i]]]] 
+    }
+    
+
+    bestModel <- do.call(lvnet,c(list(data=args$data,
+                                      fitInd = Init$mxResults$independence,
+                                      fitSat = Init$mxResults$saturated,
+                                      startValues = Init),argsRefit))
+    
+  }
+  
   
   # Extract fit indices:
   Res$fit <- Res$res$fitMeasures
@@ -51,10 +82,20 @@ lvnetLasso <- function(
   tuning.max = 0.5,
   criterion = c("bic","aic","ebic"),
   verbose = TRUE,
-  refit = TRUE,
+  refitFinal = TRUE,
+  refitAll = FALSE,
   nCores = 1, # Set to > 1 to use parallel computing
   ... # lvnet arguments
 ){
+  if (any(names(list(...))=="refit")){
+    warning("Argument 'refit' has been deprecated, please use refitFinal instead.")
+    refitFinal <- list(...)[['refit']]
+  }
+  refit <- refitFinal
+  if (refitAll){
+    refit <- FALSE
+  }
+  
   criterion <- match.arg(criterion)
   criterion <- switch(criterion,
                       bic = "bic",
@@ -86,7 +127,7 @@ lvnetLasso <- function(
   ### MAIN LOOP ###
   if (nCores == 1){
     
-    Results <- lapply(seq_len(nTuning),lassoSearchFun,tuning=tuning, Init=Init, args=args, verbose=verbose, lassoMatrix=lassoMatrix,nTuning=nTuning,lassoTol=lassoTol)
+    Results <- lapply(seq_len(nTuning),lassoSearchFun,tuning=tuning, Init=Init, args=args, verbose=verbose, lassoMatrix=lassoMatrix,nTuning=nTuning,lassoTol=lassoTol,refitAll=refitAll)
   
   } else {
     # Number of clusters:
@@ -100,7 +141,7 @@ lvnetLasso <- function(
     }
     
     # Run loop:
-    Results <- parallel::parLapply(cl,seq_len(nTuning),lassoSearchFun,tuning=tuning, Init=Init, args=args, verbose=FALSE, lassoMatrix=lassoMatrix,nTuning=nTuning,lassoTol=lassoTol)
+    Results <- parallel::parLapply(cl,seq_len(nTuning),lassoSearchFun,tuning=tuning, Init=Init, args=args, verbose=FALSE, lassoMatrix=lassoMatrix,nTuning=nTuning,lassoTol=lassoTol,refitAll=refitAll)
     
     # Stop cluster:
     stopCluster(cl)
