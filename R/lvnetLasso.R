@@ -47,7 +47,7 @@ lassoSearchFun <- function(i, tuning, Init, args, verbose, lassoMatrix,nTuning,l
     }
     
 
-    bestModel <- do.call(lvnet,c(list(data=args$data,
+    Res$res <- do.call(lvnet,c(list(data=args$data,
                                       fitInd = Init$mxResults$independence,
                                       fitSat = Init$mxResults$saturated,
                                       startValues = Init),argsRefit))
