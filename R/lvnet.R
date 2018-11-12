@@ -7,7 +7,6 @@ setSym <- function(x) {
 
 countPars <- function(x,tol=sqrt(.Machine$double.eps)){
   Matrices <- x@matrices
-
   # Pars per matrix:
   counts <- sapply(Matrices,function(mat){
     symm <- "SymmMatrix" %in% class(mat)
@@ -289,8 +288,7 @@ lvnet <- function(
     # Start with means:
 
   Pars <- countPars(fitMod, ifelse(lasso==0,sqrt(.Machine$double.eps),lassoTol))
-    
-  
+
   # Number of variables:
   Results$fitMeasures$nvar <- Pars$nVar
   

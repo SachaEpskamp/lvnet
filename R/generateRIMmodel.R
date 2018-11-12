@@ -49,7 +49,6 @@ generatelvnetmodel <- function(
   mimic = c("lvnet","lavaan"),
   fitFunction = c("default","ML","penalizedML")
   ){
-  
   mimic <- match.arg(mimic)
   
   fitFunction <- match.arg(fitFunction)
@@ -488,12 +487,12 @@ generatelvnetmodel <- function(
     
     # Only estimate inverse of theta, obtain omega_theta and delta_theta afterwards:
     # Use
-
     Mx_theta_inverse <- OpenMx::mxMatrix(
       type = "Symm",
       nrow = Nvar,
       ncol = Nvar,
       free = is.na(omega_theta) | is.na(delta_theta),
+      labels=toLabel(omega_theta,"theta_inverse",TRUE),
       values = diag(1,Nvar),
       lbound = ifelse(diag(Nvar) == 1,0, -Inf),
       ubound = Inf,
@@ -709,7 +708,6 @@ generatelvnetmodel <- function(
     }
     
 
-  
     if (Nlat > 0){
       Mx_sigma <- OpenMx::mxAlgebra(
         lambda %*% solve(I_lat - beta) %*% psi %*% t(solve(I_lat - beta)) %*% t(lambda) + theta, 

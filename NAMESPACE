@@ -22,6 +22,8 @@ S3method(plot, lvnet)
 S3method(plot, lvnetLasso)
 S3method(plot, lvnetSearch)
 
+importFrom(qgraph, "ggmFit")
+
 
 # Imports
 import(glasso)

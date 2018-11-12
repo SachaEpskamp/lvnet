@@ -1,6 +1,7 @@
 Changes in Version 0.3.3
   o Added 'refitAll' argument to lvnetLasso to refit all models in the LASSO path before evaluating EBIC. This leads to similar functionality as qgraph::ggmModSelect(.., stepwise = FALSE), although the performance is slower.
   o Removed a warning on depracated dplyr functions
+  o Fixed a bug in counting the number of parameters in RNM LASSO estimation
 
 Changes in Version 0.3.3
   o 'ggmFit' is no longer exported by lvnet
