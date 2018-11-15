@@ -8,9 +8,10 @@ LASSO model selection
 This function runs \code{lvnet} for a number of different tuning parameters, selects the best model based on some criterion and refits that model to obtain accurate parameter estimates. The \code{\link{lassoSelect}} function can afterwards be used to select a different model.
 }
 \usage{
-lvnetLasso(data, lassoMatrix, lassoTol = 1e-04, nTuning = 20, tuning.min = 0.01, 
-    tuning.max = 0.5, criterion = c("bic", "aic", "ebic"), verbose = TRUE, refit = TRUE, 
-    nCores = 1, ...)
+lvnetLasso(data, lassoMatrix, lassoTol = 1e-04, nTuning = 20, 
+  tuning.min = 0.01, tuning.max = 0.5, criterion = c("bic", "aic", 
+  "ebic"), verbose = TRUE, refitFinal = TRUE, refitAll = FALSE, 
+  nCores = 1, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -38,8 +39,11 @@ Criterion to use in model selection
   \item{verbose}{
 Should progress be printed to the console?
 }
-  \item{refit}{
+  \item{refitFinal}{
 Logical, should the best fitting model be refitted without LASSO regularization?
+}
+\item{refitAll}{
+Logical, should *all* models be refitted without LASSO regularization (but with zeroes constrained) before evaluating fit criterium?
 }
   \item{nCores}{
 Number of cores to use in parallel computing.
