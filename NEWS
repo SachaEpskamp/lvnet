@@ -1,3 +1,6 @@
+Changes in version 0.3.5
+  o lvnet is now no longer supported, with most functionality moved to the psychonetrics package. A message now warns users of this on loading the package.
+
 Changes in Version 0.3.3
   o Added 'refitAll' argument to lvnetLasso to refit all models in the LASSO path before evaluating EBIC. This leads to similar functionality as qgraph::ggmModSelect(.., stepwise = FALSE), although the performance is slower.
   o The argument 'refit' has been renamed 'refitFinal'
